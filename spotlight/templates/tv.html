@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPOTLIGHT — Fire TV Experience</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/tv.css">
+</head>
+<body>
+  <div id="tvApp" class="tv-container {% if state.is_frozen %}is-frozen{% endif %} {% if state.status.value == 'analyzing' %}is-analyzing{% elif state.status.value == 'answered' %}is-answered{% endif %}">
+    
+    <!-- Top HUD -->
+    <header class="tv-hud-top">
+      <div class="channel-brand">
+        <span class="brand-dot"></span>
+        <div>
+          <div id="hudTitle" class="channel-title">{{ scene.title }}</div>
+          <div id="hudChannel" class="channel-subtitle">{{ scene.channel }}</div>
+        </div>
+      </div>
+      <div class="timecode-block">
+        <div id="hudTimecode" class="timecode">{{ state.timestamp }}</div>
+        <span class="firetv-badge">FIRE TV 4K</span>
+      </div>
+    </header>
+
+    <!-- Freeze Notification Banner -->
+    <div class="freeze-banner">
+      <span>FRAME FROZEN FOR SPOTLIGHT ANALYSIS</span>
+    </div>
+
+    <!-- Simulated Broadcast Scenes -->
+    <main class="scene-canvas">
+      
+      <!-- Beat 1: Kids Nature Documentary -->
+      <section id="sceneKids" class="scene-kids" style="{% if state.current_beat.value != 'kids' %}display:none;{% endif %} width:100%; height:100%;">
+        <div class="kids-sun-glow"></div>
+        <div class="kids-ray-spectrum"></div>
+        <svg class="kids-mountain-backdrop" viewBox="0 0 1440 400" preserveAspectRatio="none">
+          <polygon points="0,400 240,180 500,320 800,140 1150,300 1440,160 1440,400" fill="#042f2e" opacity="0.85"/>
+          <polygon points="0,400 380,220 720,340 1020,200 1440,280 1440,400" fill="#022c22" opacity="0.95"/>
+          <polygon points="0,400 180,310 460,370 780,290 1200,360 1440,320 1440,400" fill="#064e3b" opacity="1"/>
+        </svg>
+      </section>
+
+      <!-- Beat 2: Movie Thriller -->
+      <section id="sceneMovie" class="scene-movie" style="{% if state.current_beat.value != 'movie' %}display:none;{% endif %} width:100%; height:100%;">
+        <div class="movie-aspect-bars"></div>
+        <div class="cinema-room">
+          <div class="cinema-dossier-grid">
+            <span style="font-family:var(--font-mono); font-size:0.75rem; color:#f59e0b; letter-spacing:0.1em;">TACTICAL GRID // FACILITY LOCKDOWN</span>
+            <span style="font-family:var(--font-mono); font-size:0.75rem; color:#94a3b8;">CIPHER KEY PURGE: 14:58</span>
+          </div>
+          <div class="cinema-crosshair"></div>
+        </div>
+        <div class="movie-aspect-bars-bottom"></div>
+      </section>
+
+      <!-- Beat 3: Soccer Match -->
+      <section id="sceneSports" class="scene-sports" style="{% if state.current_beat.value != 'sports' %}display:none;{% endif %} width:100%; height:100%;">
+        <div class="soccer-scorebug">
+          <span class="scorebug-team">MAD</span>
+          <span class="scorebug-score">1 - 1</span>
+          <span class="scorebug-team">MIL</span>
+          <span class="scorebug-clock">74:12</span>
+        </div>
+        <div class="pitch-perspective">
+          <div class="penalty-box"></div>
+          <div class="center-circle"></div>
+        </div>
+      </section>
+
+      <!-- Beat 4: News Studio Fact-Check -->
+      <section id="sceneNews" class="scene-news" style="{% if state.current_beat.value != 'news' %}display:none;{% endif %} width:100%; height:100%;">
+        <div class="news-studio-grid"></div>
+        <div class="news-moon-graphic"></div>
+        <div class="news-lower-third">
+          <div class="lower-third-headline">SPACE EXPLORATION ARCHIVES: 1969 APOLLO DATA AUDITED</div>
+          <div class="lower-third-ticker">WORLD NEWS CENTRAL // MULTI-AGENCY TELEMETRY CONFIRMED // FACT AUDIT READY</div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Scene Bottom Badge -->
+    <div id="sceneLabel" class="scene-overlay-label">
+      {{ scene.category | upper }} // {{ scene.timestamp }}
+    </div>
+
+    <!-- Analyzing Status Modal -->
+    <aside class="analyzing-modal" aria-live="polite">
+      <div class="radar-spinner"></div>
+      <div class="analyzing-title">ANALYZING SCENE & QUESTION</div>
+      <div class="analyzing-subtitle">CROSS-REFERENCING KNOWLEDGE GRAPH...</div>
+    </aside>
+
+    <!-- Big-Type High-Contrast Answer Overlay -->
+    <article id="answerOverlay" class="answer-overlay" aria-live="assertive">
+      <div class="overlay-inner">
+        
+        <div class="overlay-meta-row">
+          <span id="overlaySubtitle" class="badge badge-sky">
+            {% if state.current_overlay %}{{ state.current_overlay.subtitle }}{% else %}SPOTLIGHT OVERLAY{% endif %}
+          </span>
+          <span id="overlayBadge" class="badge badge-amber" style="{% if not state.current_overlay or not state.current_overlay.verdict_badge %}display:none;{% endif %}">
+            {% if state.current_overlay %}{{ state.current_overlay.verdict_badge }}{% endif %}
+          </span>
+          <span id="overlayQuestion" class="overlay-question-pill">
+            {% if state.current_overlay %}Q: {{ state.current_overlay.question }}{% endif %}
+          </span>
+        </div>
+
+        <h1 id="overlayTitle" class="overlay-title">
+          {% if state.current_overlay %}{{ state.current_overlay.title }}{% else %}Spotlight Explainer{% endif %}
+        </h1>
+
+        <p id="overlayExplanation" class="overlay-explanation">
+          {% if state.current_overlay %}{{ state.current_overlay.primary_explanation }}{% endif %}
+        </p>
+
+        <!-- Structured Details Grid -->
+        <div id="overlayDetails" class="overlay-details-grid">
+          {% if state.current_overlay and state.current_overlay.key_details %}
+            {% for item in state.current_overlay.key_details %}
+              <div class="detail-card">{{ item }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <!-- Footer: Citations & Companion Seed -->
+        <footer class="overlay-footer-row">
+          <div class="sources-list">
+            <span style="font-family:var(--font-mono); font-size:0.75rem;">VERIFIED SOURCES:</span>
+            <div id="overlaySources" style="display:inline-flex; gap:8px;">
+              {% if state.current_overlay and state.current_overlay.sources %}
+                {% for src in state.current_overlay.sources %}
+                  <span class="source-item">{{ src }}</span>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="overlayCompanion" class="companion-seed-pill" style="{% if not state.current_overlay or not state.current_overlay.companion_note %}display:none;{% endif %}">
+            {% if state.current_overlay %}{{ state.current_overlay.companion_note }}{% endif %}
+          </div>
+
+          <div class="dismiss-hint">PRESS ENTER OR TAP REMOTE TO RESUME</div>
+        </footer>
+
+      </div>
+    </article>
+
+    <!-- TV Key Controls (for demo navigation) -->
+    <nav class="tv-control-bar">
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'kids'})})">[1] Kids</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'movie'})})">[2] Movie</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'sports'})})">[3] Sports</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'news'})})">[4] News</span>
+      <span class="key-hint" onclick="fetch('/api/dismiss', {method:'POST'})">[Space/Enter] Resume</span>
+    </nav>
+
+  </div>
+
+  <script src="/static/js/tv.js"></script>
+</body>
+</html>

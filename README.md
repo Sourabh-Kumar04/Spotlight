@@ -1,0 +1,114 @@
+# SPOTLIGHT — The Curiosity Remote for Fire TV
+
+> **Amazon "Build, Ship, Shape" Hackathon — Fire TV Track**  
+> *One tap. Any screen. Any question.*
+
+---
+
+## Concept
+
+You're watching TV. Something happens on screen that confuses you:
+- A soccer player gets booked, and nobody at home knows the rule.
+- A character re-appears after 40 minutes, and you can't remember their name.
+- Your kid asks why the sky is blue during a nature documentary.
+- A broadcast makes an astonishing historical claim.
+
+You don't want to type a query into a sluggish TV keyboard or open a mobile browser and search through search engine clutter.
+
+**With SPOTLIGHT, you tap ONE button on your phone remote:**
+1. **Instant Frame Freeze:** The TV freezes the broadcast moment.
+2. **Telemetry & Visual Analysis:** The backend analyzes the broadcast metadata, frame timecode, and question.
+3. **High-Contrast 10-Foot Overlay:** A big-type, high-contrast overlay explains the answer in seconds on the TV screen.
+4. **Learning Companion Seed:** The system captures your curiosity query into a persistent profile (*"You've asked about fouls twice this week"*).
+
+---
+
+## Live Interfaces
+
+| Interface | URL | Purpose |
+| :--- | :--- | :--- |
+| **Fire TV App** | [`/tv`](http://localhost:8000/tv) | Full-screen 10-foot UI with frame freeze, analysis HUD, and big-type overlay. |
+| **Phone Remote** | [`/remote`](http://localhost:8000/remote) | Mobile web UI with the single big **ASK** button, beat switcher, and editable query. |
+| **Side-by-Side Simulator** | [`/demo`](http://localhost:8000/demo) | Dual-screen view of TV + Phone Remote side-by-side with 1-click automated tour. |
+| **Portal Gateway** | [`/`](http://localhost:8000/) | Central launcher and beat reference table. |
+| **REST & WebSocket API** | [`/docs`](http://localhost:8000/docs) | Interactive Swagger OpenAPI documentation. |
+
+---
+
+## The 4 Canonical Demo Beats
+
+Spotlight includes 4 specialized knowledge engines designed for real-world TV watching categories:
+
+| Beat | Category | Channel & Scene | Canonical Question | Engine Output |
+| :--- | :--- | :--- | :--- | :--- |
+| **Beat 1** | **Kids Documentary** | *Planet Earthlings: Wonders of the Sky* (Discovery Horizon 4K) | *"Why is the sky blue?"* | Warm 3-sentence parent read-aloud explanation of Rayleigh scattering; high-contrast; child-friendly. |
+| **Beat 2** | **Cinema Thriller** | *The Syndicate Protocol* (Prime Cinema Premier) | *"Who is that guy and why is everyone mad at him?"* | Living Cast catch-up card: Director Vance, dock betrayal 10 mins ago, 15-minute facility purge stakes. |
+| **Beat 3** | **Sports (Soccer)** | *Madrid vs Milan* (Sky Sports Matchday Live) | *"Why was that a foul?"* | Replay breakdown of 74:12 studs-up sliding tackle + IFAB Law 12 reckless challenge ruling & yellow card. |
+| **Beat 4** | **News Fact-Check** | *Space Exploration Archives* (World News Central) | *"Is that claim true?"* | Non-partisan scientific audit: Apollo 11 moon landing **VERIFIED TRUE** with 2 independent citations. |
+
+> **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms**) via curated rule engines. Free-form questions route seamlessly to the LLM fallback (Ollama `llama3.2:3b` default or OpenAI via environment variables), falling back gracefully to context-aware synthesis if offline.
+
+---
+
+## How to Run
+
+### Requirements
+- **Python 3.12+**
+- **uv** (or standard pip)
+
+### 1. Install Dependencies
+```bash
+uv pip install -e ".[dev]"
+# Or: pip install fastapi "uvicorn[standard]" httpx jinja2 websockets pytest pytest-asyncio
+```
+
+### 2. Start the Server
+```bash
+python3 -m uvicorn spotlight.main:app --host 0.0.0.0 --port 8000
+```
+
+### 3. Open the Experience
+- **Evaluating side-by-side?** Open [`http://localhost:8000/demo`](http://localhost:8000/demo) to see the TV and Phone Remote operating in real time together.
+- **Testing multi-device?** Open `/tv` on your TV / monitor and `/remote` on your smartphone (connected to the same local network).
+
+---
+
+## Demo Mode (`?demo=1`) & Deterministic Tour
+
+To record a demo video or run deterministic tests without any network dependency:
+1. Navigate to [`http://localhost:8000/demo?demo=1`](http://localhost:8000/demo?demo=1).
+2. Click **RUN FULL 4-BEAT TOUR** in the top navigation bar.
+3. The simulator steps through all 4 beats with scripted timings:
+   - Switches scene
+   - Triggers freeze & analysis HUD
+   - Displays canonical answer overlay
+   - Logs query to session history & advances to the next beat.
+
+---
+
+## Testing
+
+Run the full pytest suite (39 automated tests covering engines, fallback, state machine, API, and WebSockets):
+
+```bash
+python3 -m pytest -v
+```
+
+All 39 tests pass green.
+
+---
+
+## Fire TV Keyboard Shortcuts (for 10-Foot UI Testing)
+
+When viewing `/tv` in a browser or Fire TV test browser:
+- `1` : Switch to Beat 1 (Kids Nature Documentary)
+- `2` : Switch to Beat 2 (Movie Espionage Thriller)
+- `3` : Switch to Beat 3 (Soccer Match)
+- `4` : Switch to Beat 4 (News Fact-Check)
+- `Space` / `Enter` : Dismiss overlay / resume video playback
+
+---
+
+## License
+
+MIT License. Open-source for the Amazon "Build, Ship, Shape" Hackathon.

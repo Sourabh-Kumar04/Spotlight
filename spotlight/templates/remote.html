@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SPOTLIGHT — Phone Remote</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/remote.css">
+</head>
+<body class="remote-body">
+  <main class="remote-wrapper">
+    
+    <!-- Remote Header -->
+    <header class="remote-header">
+      <div class="remote-logo">SPOTLIGHT<span>.REMOTE</span></div>
+      <div class="sync-pill">
+        <span class="sync-dot"></span>
+        <span id="syncStatus">TV SYNCED</span>
+      </div>
+    </header>
+
+    <!-- TV Now Playing Card -->
+    <section class="tv-target-card">
+      <div class="target-meta-row">
+        <span id="targetChannel">{{ scene.channel }}</span>
+        <span id="targetTimecode">{{ state.timestamp }}</span>
+      </div>
+      <div id="targetTitle" class="target-title">{{ scene.title }}</div>
+      <div id="targetStatus" class="target-status">
+        {% if state.status.value == 'analyzing' %}ANALYZING ON TV...{% elif state.status.value == 'answered' %}ANSWER ACTIVE ON TV{% else %}PLAYING{% endif %}
+      </div>
+    </section>
+
+    <!-- Beat Selector Tabs -->
+    <section class="beat-selector-group">
+      <span class="selector-label">SELECT DEMO BEAT / SCENE:</span>
+      <div class="beat-tabs">
+        <button type="button" class="beat-tab-btn {% if state.current_beat.value == 'kids' %}active{% endif %}" data-beat="kids">
+          1. KIDS
+        </button>
+        <button type="button" class="beat-tab-btn {% if state.current_beat.value == 'movie' %}active{% endif %}" data-beat="movie">
+          2. MOVIE
+        </button>
+        <button type="button" class="beat-tab-btn {% if state.current_beat.value == 'sports' %}active{% endif %}" data-beat="sports">
+          3. SPORTS
+        </button>
+        <button type="button" class="beat-tab-btn {% if state.current_beat.value == 'news' %}active{% endif %}" data-beat="news">
+          4. NEWS
+        </button>
+      </div>
+    </section>
+
+    <!-- Question Input Box -->
+    <section class="question-input-card">
+      <label for="questionInput" class="question-helper">
+        <span>CURIOSITY QUESTION:</span>
+        <span style="color:#38bdf8;">EDITABLE</span>
+      </label>
+      <textarea id="questionInput" class="question-textarea" rows="2" placeholder="Ask anything about what is on screen...">{{ scene.default_question }}</textarea>
+    </section>
+
+    <!-- THE ONE BIG ASK BUTTON -->
+    <section class="ask-button-container">
+      <button id="askBtn" class="big-ask-btn" type="button" aria-label="Ask Spotlight to freeze TV and answer">
+        <span class="btn-primary-text">ASK</span>
+        <span class="btn-sub-text">TAP TO FREEZE TV &amp; EXPLAIN</span>
+      </button>
+    </section>
+
+    <!-- Secondary Actions -->
+    <section class="remote-actions-row">
+      <button id="dismissBtn" class="btn-action-secondary" type="button">RESUME TV PLAYBACK</button>
+      <button id="resetBtn" class="btn-action-secondary" type="button">RESET DEMO</button>
+    </section>
+
+    <!-- Learning Companion Seed Drawer -->
+    <section class="companion-drawer">
+      <div class="companion-drawer-header">
+        <span class="companion-drawer-title">LEARNING COMPANION</span>
+        <span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);">ACTIVE SESSION</span>
+      </div>
+      <div id="companionInsight" class="companion-insight-box">
+        Curiosity remote connected. Tap Ask to freeze any moment and log it to your Curiosity Profile.
+      </div>
+
+      <div class="companion-drawer-header" style="margin-top:14px;">
+        <span class="companion-drawer-title" style="color:var(--text-secondary);">RECENT CURIOSITY LOG</span>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="history-item-row">No curiosity queries logged yet.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/js/remote.js"></script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPOTLIGHT — Curiosity Remote for Fire TV</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 20%, #151a26 0%, #08090c 70%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+    }
+    .landing-hero {
+      max-width: 900px;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .brand-title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+    .brand-title span {
+      color: #38bdf8;
+    }
+    .tagline {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 680px;
+      margin: 0 auto 20px;
+      line-height: 1.6;
+    }
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .portal-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1040px;
+      width: 100%;
+      margin-bottom: 48px;
+    }
+    .portal-card {
+      background: rgba(22, 27, 36, 0.7);
+      border: 1px solid var(--border-medium);
+      border-radius: 16px;
+      padding: 30px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+    }
+    .portal-card:hover {
+      border-color: #38bdf8;
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.15);
+    }
+    .portal-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .portal-card-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .portal-card-desc {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .portal-card-action {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-top: auto;
+      padding-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .beats-spec-card {
+      max-width: 1040px;
+      width: 100%;
+      background: rgba(14, 18, 25, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 28px;
+    }
+    .beats-spec-card h2 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .beat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .beat-table th {
+      text-align: left;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .beat-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+    }
+    .beat-table tr:last-child td {
+      border-bottom: none;
+    }
+    .code-pill {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  
+  <header class="landing-hero">
+    <h1 class="brand-title">SPOTLIGHT</h1>
+    <p class="tagline">
+      The curiosity remote for Fire TV. You're watching TV, something confuses you, you tap one button on your phone. The TV freezes the moment and explains it with an overlay.
+    </p>
+    <div class="badge-bar">
+      <span class="badge badge-sky">FIRE TV TRACK</span>
+      <span class="badge badge-amber">AMAZON BUILD SHIP SHAPE</span>
+      <span class="badge badge-emerald">CANONICAL &lt;100MS + LLM FALLBACK</span>
+      <span class="badge badge-purple">FASTAPI + PYTHON 3.12</span>
+    </div>
+  </header>
+
+  <main class="portal-cards-grid">
+    <a href="/tv" class="portal-card" target="_blank">
+      <div class="portal-card-header">
+        <span class="portal-card-title">Fire TV App</span>
+        <span class="badge badge-sky">10-FOOT UI</span>
+      </div>
+      <p class="portal-card-desc">
+        Full-screen cinematic Fire TV display with 4 placeholder scenes, frame freeze animation, and big-type answer overlays.
+      </p>
+      <div class="portal-card-action">OPEN TV SCREEN &rarr;</div>
+    </a>
+
+    <a href="/remote" class="portal-card" target="_blank">
+      <div class="portal-card-header">
+        <span class="portal-card-title">Phone Remote</span>
+        <span class="badge badge-amber">MOBILE WEB</span>
+      </div>
+      <p class="portal-card-desc">
+        Mobile web remote featuring the single big Ask button, beat selector, prefilled question input, and learning companion drawer.
+      </p>
+      <div class="portal-card-action">OPEN PHONE REMOTE &rarr;</div>
+    </a>
+
+    <a href="/demo" class="portal-card">
+      <div class="portal-card-header">
+        <span class="portal-card-title">Live Simulator</span>
+        <span class="badge badge-emerald">DEMO MODE (?demo=1)</span>
+      </div>
+      <p class="portal-card-desc">
+        Side-by-side simulator displaying Fire TV and Phone Remote together with 1-click deterministic tour execution.
+      </p>
+      <div class="portal-card-action">LAUNCH SIMULATOR &rarr;</div>
+    </a>
+  </main>
+
+  <section class="beats-spec-card">
+    <h2>4 KNOWLEDGE ENGINES &amp; CANONICAL DEMO BEATS</h2>
+    <table class="beat-table">
+      <thead>
+        <tr>
+          <th>BEAT</th>
+          <th>SCENE &amp; CHANNEL</th>
+          <th>CANONICAL QUESTION</th>
+          <th>ENGINE OUTPUT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong style="color:#38bdf8;">Beat 1</strong></td>
+          <td>Planet Earthlings (Discovery Horizon 4K)</td>
+          <td><span class="code-pill">Why is the sky blue?</span></td>
+          <td>Warm 3-sentence parent read-aloud Rayleigh scattering explainer</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#f59e0b;">Beat 2</strong></td>
+          <td>The Syndicate Protocol (Prime Cinema)</td>
+          <td><span class="code-pill">Who is that guy and why is everyone mad at him?</span></td>
+          <td>Director Vance catch-up card: character identity, dock betrayal, lockout stakes</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#f43f5e;">Beat 3</strong></td>
+          <td>Madrid vs Milan (Sky Sports Matchday)</td>
+          <td><span class="code-pill">Why was that a foul?</span></td>
+          <td>Replay review of 74' studs challenge + IFAB Law 12 ruling &amp; card</td>
+        </tr>
+        <tr>
+          <td><strong style="color:#10b981;">Beat 4</strong></td>
+          <td>Space Archives (World News Central)</td>
+          <td><span class="code-pill">Is that claim true?</span></td>
+          <td>Neutral science audit: Apollo 11 lunar landing VERIFIED TRUE + 2 sources</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</body>
+</html>

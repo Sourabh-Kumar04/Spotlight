@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPOTLIGHT — Side-by-Side Fire TV & Remote Simulator</title>
+  <link rel="stylesheet" href="/static/css/common.css">
+  <style>
+    body {
+      background: #06070a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .demo-bar {
+      background: #0e1118;
+      border-bottom: 1px solid var(--border-medium);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .demo-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .demo-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .demo-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .demo-steps-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .demo-step-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-medium);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .demo-step-btn:hover, .demo-step-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #fff;
+    }
+    .demo-run-all-btn {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border: 1px solid #38bdf8;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .simulator-split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+    .frame-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-right: 1px solid var(--border-medium);
+      background: #000;
+    }
+    .frame-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .remote-frame-container {
+      width: 100%;
+      height: 100%;
+      background: #090a0f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px;
+    }
+    .remote-frame-container iframe {
+      width: 100%;
+      height: 100%;
+      max-width: 420px;
+      border: none;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body>
+  
+  <header class="demo-bar">
+    <div class="demo-title-group">
+      <span class="demo-title">SPOTLIGHT SIMULATOR</span>
+      <span class="demo-badge">DETERMINISTIC DEMO MODE (?demo=1)</span>
+    </div>
+    
+    <nav class="demo-steps-nav">
+      <button class="demo-step-btn" onclick="runDemoStep(0)">BEAT 1: KIDS</button>
+      <button class="demo-step-btn" onclick="runDemoStep(1)">BEAT 2: MOVIE</button>
+      <button class="demo-step-btn" onclick="runDemoStep(2)">BEAT 3: SOCCER</button>
+      <button class="demo-step-btn" onclick="runDemoStep(3)">BEAT 4: NEWS</button>
+      <button id="runTourBtn" class="demo-run-all-btn" onclick="runAutomatedTour()">RUN FULL 4-BEAT TOUR</button>
+    </nav>
+  </header>
+
+  <main class="simulator-split">
+    <!-- Fire TV Screen -->
+    <div class="frame-container">
+      <iframe id="tvFrame" src="/tv?demo=1" title="Fire TV Screen"></iframe>
+    </div>
+
+    <!-- Phone Remote -->
+    <div class="remote-frame-container">
+      <iframe id="remoteFrame" src="/remote?demo=1" title="Spotlight Phone Remote"></iframe>
+    </div>
+  </main>
+
+  <script>
+    async function runDemoStep(idx) {
+      try {
+        const res = await fetch("/api/demo/step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step_index: idx })
+        });
+        const data = await res.json();
+        console.log("Executed demo step", idx, data);
+      } catch (err) {
+        console.error("Demo step error", err);
+      }
+    }
+
+    let tourRunning = false;
+    async function runAutomatedTour() {
+      if (tourRunning) return;
+      tourRunning = true;
+      const btn = document.getElementById("runTourBtn");
+      btn.textContent = "TOUR IN PROGRESS...";
+
+      for (let i = 0; i < 4; i++) {
+        await runDemoStep(i);
+        // Wait 4 seconds per beat to read answer overlay
+        await new Promise(r => setTimeout(r, 4500));
+      }
+
+      tourRunning = false;
+      btn.textContent = "RUN FULL 4-BEAT TOUR";
+    }
+  </script>
+</body>
+</html>
