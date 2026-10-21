@@ -33,6 +33,70 @@
     news: sceneNews,
   };
 
+  // ---- Spoken answers (Web Speech API) ----
+  // The TV speaks the answer aloud; text overlay stays as visual support.
+  let soundOn = true;
+  let preferredVoice = null;
+
+  function pickVoice() {
+    try {
+      const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+      if (!voices.length) return;
+      preferredVoice =
+        voices.find((v) => /google us english/i.test(v.name)) ||
+        voices.find((v) => /^en[-_]US/i.test(v.lang)) ||
+        voices.find((v) => /^en/i.test(v.lang)) ||
+        voices[0];
+    } catch (_) {}
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+
+  function stopSpeech() {
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (_) {}
+  }
+
+  function speakAnswer(answer) {
+    if (!soundOn || !window.speechSynthesis || !answer) return;
+    stopSpeech();
+    const text = `${answer.title || ""}. ${answer.primary_explanation || ""}`.trim();
+    if (!text) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    if (preferredVoice) utter.voice = preferredVoice;
+    utter.rate = 1.0;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+    updateSoundBadge();
+  }
+
+  function toggleSound() {
+    soundOn = !soundOn;
+    if (!soundOn) stopSpeech();
+    updateSoundBadge();
+  }
+
+  // Small floating sound toggle, created dynamically (no HTML change needed)
+  let soundBadge = null;
+  function updateSoundBadge() {
+    if (!soundBadge) {
+      soundBadge = document.createElement("button");
+      soundBadge.id = "soundToggle";
+      soundBadge.style.cssText =
+        "position:fixed;top:14px;right:16px;z-index:9999;" +
+        "background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,0.25);" +
+        "border-radius:999px;padding:8px 16px;font-size:13px;letter-spacing:0.12em;" +
+        "cursor:pointer;font-family:inherit;";
+      soundBadge.addEventListener("click", toggleSound);
+      document.body.appendChild(soundBadge);
+    }
+    soundBadge.textContent = soundOn ? "SOUND: ON" : "SOUND: OFF";
+  }
+  updateSoundBadge();
+
   let currentState = {
     current_beat: "kids",
     status: "playing",
@@ -182,6 +246,9 @@
         overlayCompanion.style.display = "none";
       }
     }
+
+    // Spoken reply
+    speakAnswer(answer);
   }
 
   // Keyboard controls for Fire TV testing
@@ -189,9 +256,12 @@
     // Space or Enter dismisses overlay or unfreezes
     if (e.code === "Space" || e.code === "Enter") {
       e.preventDefault();
+      stopSpeech();
       if (currentState.is_frozen) {
         await fetch("/api/dismiss", { method: "POST" });
       }
+    } else if (e.key === "m" || e.key === "M") {
+      toggleSound();
     } else if (e.key === "1") {
       await fetch("/api/beat", {
         method: "POST",
