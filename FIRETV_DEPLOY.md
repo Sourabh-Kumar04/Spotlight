@@ -78,6 +78,15 @@ Budget a few hours if you've never touched it. The sample apps
 (github.com/AmazonAppDev/react-native-hello-world) are the fastest starting point —
 clone one, swap the WebView URI to your SPOTLIGHT `/tv` URL, rebuild.
 
+> [!NOTE]
+> **Vega Virtual Device (VVD) WebView Limitation**:
+> The Vega Virtual Device emulator (0.24 image) omits the full Chromium WebView
+> runtime (`/com.amazon.kepler.webview_4@IWebview_4`). Attempting to launch a
+> WebView package on the VVD will trigger Amazon's notification: *"The Vega Virtual
+> Device is missing modules that are available on a physical device. Test your app
+> using a Fire TV Stick instead."* See `spotlight/vega-wrapper/VVD_VERIFICATION.md`
+> and `vvd_screenshot.png` for detailed logs and verification output.
+
 ## Path 2: Silk browser — fastest on-device check, zero packaging
 
 Every Fire TV Stick ships Amazon's Silk browser. Open `http://<host-ip>:8000/tv`
