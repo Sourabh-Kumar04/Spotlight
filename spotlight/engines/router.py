@@ -8,6 +8,10 @@ from spotlight.engines.kids import KidsEngine
 from spotlight.engines.movie import MovieEngine
 from spotlight.engines.news import NewsEngine
 from spotlight.engines.sports import SportsEngine
+from spotlight.engines.cooking import CookingEngine
+from spotlight.engines.esports import EsportsEngine
+from spotlight.engines.shopping import ShoppingEngine
+from spotlight.engines.language import LanguageEngine
 from spotlight.engines.llm_fallback import llm_fallback_engine
 from spotlight.models import AnswerPayload, BeatId, SceneData
 
@@ -19,6 +23,10 @@ class KnowledgeRouter:
             BeatId.MOVIE: MovieEngine(),
             BeatId.SPORTS: SportsEngine(),
             BeatId.NEWS: NewsEngine(),
+            BeatId.COOKING: CookingEngine(),
+            BeatId.ESPORTS: EsportsEngine(),
+            BeatId.SHOPPING: ShoppingEngine(),
+            BeatId.LANGUAGE: LanguageEngine(),
         }
 
     async def resolve(

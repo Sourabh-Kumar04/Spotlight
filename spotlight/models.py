@@ -13,6 +13,10 @@ class BeatId(str, Enum):
     MOVIE = "movie"
     SPORTS = "sports"
     NEWS = "news"
+    COOKING = "cooking"
+    ESPORTS = "esports"
+    SHOPPING = "shopping"
+    LANGUAGE = "language"
 
 
 class TVStatus(str, Enum):

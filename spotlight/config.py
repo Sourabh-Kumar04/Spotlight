@@ -58,6 +58,46 @@ SCENES: Dict[BeatId, SceneData] = {
         default_question="Is that claim true?",
         visual_theme="news-studio",
     ),
+    BeatId.COOKING: SceneData(
+        beat_id=BeatId.COOKING,
+        title="Midnight Kitchen: Weeknight Shakshuka",
+        channel="Sizzle Network 4K",
+        category="Cooking Show",
+        timestamp="22:41",
+        context_summary="Chef blooms spices in hot oil before the tomatoes go in; the camera lingers on the spice tin.",
+        default_question="What spice did they just add?",
+        visual_theme="kitchen-warm",
+    ),
+    BeatId.ESPORTS: SceneData(
+        beat_id=BeatId.ESPORTS,
+        title="Grand Finals: Map 3 \u2014 Blue vs Red",
+        channel="Arena Esports Live",
+        category="Esports",
+        timestamp="28:40",
+        context_summary="Red team forces a 5v5 at mid lane right after blue spent ultimates on the dragon; blue wipes 0-for-4.",
+        default_question="Why did they lose that fight?",
+        visual_theme="arena-neon",
+    ),
+    BeatId.SHOPPING: SceneData(
+        beat_id=BeatId.SHOPPING,
+        title="The Last Heist \u2014 Rooftop Chase",
+        channel="Prime Cinema Premier",
+        category="Action / Shoppable",
+        timestamp="00:42:17",
+        context_summary="The lead sprints across rooftops; the camera holds on his sneakers for three full seconds.",
+        default_question="What shoes is he wearing?",
+        visual_theme="cinema-noir",
+    ),
+    BeatId.LANGUAGE: SceneData(
+        beat_id=BeatId.LANGUAGE,
+        title="Corazon Valiente S2E4",
+        channel="Mundo Drama HD",
+        category="Spanish Drama",
+        timestamp="00:31:02",
+        context_summary="A sister whispers encouragement to her brother before the final race; subtitles flash by quickly.",
+        default_question="What did they just say?",
+        visual_theme="drama-warm",
+    ),
 }
 
-ORDERED_BEATS = [BeatId.KIDS, BeatId.MOVIE, BeatId.SPORTS, BeatId.NEWS]
+ORDERED_BEATS = [BeatId.KIDS, BeatId.MOVIE, BeatId.SPORTS, BeatId.NEWS, BeatId.COOKING, BeatId.ESPORTS, BeatId.SHOPPING, BeatId.LANGUAGE]
