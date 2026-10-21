@@ -43,6 +43,7 @@ class AskRequest(BaseModel):
     question: str
     timestamp: Optional[str] = None
     source: str = "remote"
+    lang: str = "en"  # en | es | hi
 
 
 class AnswerPayload(BaseModel):

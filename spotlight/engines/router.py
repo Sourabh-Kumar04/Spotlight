@@ -14,6 +14,7 @@ from spotlight.engines.shopping import ShoppingEngine
 from spotlight.engines.language import LanguageEngine
 from spotlight.engines.llm_fallback import llm_fallback_engine
 from spotlight.models import AnswerPayload, BeatId, SceneData
+from spotlight.i18n import translate_answer
 
 
 class KnowledgeRouter:
@@ -35,6 +36,7 @@ class KnowledgeRouter:
         question: str,
         custom_scene: SceneData | None = None,
         force_llm: bool = False,
+        lang: str = "en",
     ) -> AnswerPayload:
         """Resolves a question using canonical curated engines or LLM fallback."""
         start_time = time.perf_counter()
@@ -53,6 +55,18 @@ class KnowledgeRouter:
         # Otherwise route to LLM fallback
         answer = await llm_fallback_engine.generate_answer(clean_question, scene)
         return answer
+
+    async def resolve_localized(
+        self,
+        beat_id: BeatId,
+        question: str,
+        custom_scene: SceneData | None = None,
+        force_llm: bool = False,
+        lang: str = "en",
+    ) -> AnswerPayload:
+        """Resolve then translate canonical answers to the requested language."""
+        answer = await self.resolve(beat_id, question, custom_scene, force_llm)
+        return translate_answer(answer, lang)
 
 
 # Global knowledge router instance

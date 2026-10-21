@@ -150,10 +150,11 @@ async def handle_ask(req: AskRequest):
         await asyncio.sleep(0.4)
 
     # 2. Resolve knowledge engine
-    answer = await knowledge_router.resolve(
+    answer = await knowledge_router.resolve_localized(
         beat_id=beat_id,
         question=req.question,
         custom_scene=scene,
+        lang=getattr(req, "lang", "en") or "en",
     )
 
     # 3. Log to session history
