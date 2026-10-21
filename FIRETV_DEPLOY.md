@@ -24,6 +24,45 @@ works on the newest Fire TV Sticks running Vega OS (see the Vega OS note below).
 - Privacy policy URL + data-handling statements are mandatory.
 - Amazon expects testing on a physical Fire TV device, not just an emulator.
 
+## Path 1b: Vega Virtual Device — record the demo on Amazon's official simulator
+
+This is the most submission-safe way to satisfy the "running on an actual Fire TV
+device or the Fire TV/Vega simulator" demo-video requirement without hardware.
+
+Prerequisites (from Amazon's docs): Vega SDK is available for **Mac (Intel & M-series)
+and Linux** — it runs in WSL. You need Node 20+, JDK 21, Python 3.
+
+1. Install the Vega SDK + developer tools:
+   https://developer.amazon.com/docs/vega/0.21/setup-overview
+   (includes the Vega CLI, Vega Virtual Device, and Vega Studio for VS Code)
+2. Start the simulator:
+   ```
+   vega virtual-device start --gui
+   ```
+3. Vega runs apps packaged as `.vpkg` (not APKs). For a web app like SPOTLIGHT,
+   Amazon's documented pattern is a thin React Native wrapper using their WebView
+   component pointed at your URL:
+   https://developer.amazon.com/docs/vega/0.21/develop-your-app-with-webview.html
+   ```tsx
+   import { WebView } from "@amazon-devices/webview";
+   // ...
+   <WebView hasTVPreferredFocus={true}
+            source={{ uri: "https://<your-host>/tv" }}
+            javaScriptEnabled={true} />
+   ```
+4. Build the wrapper (`npm run build:release` → `build/x86_64-release/*.vpkg`
+   on x86_64 Linux) and install it on the running virtual device:
+   ```
+   vega run-app build/x86_64-release/<app>_x86_64.vpkg
+   ```
+5. Screen-record the virtual device window while you drive the demo
+   (the `/remote` page on your phone/laptop talks to the same backend).
+
+Honest effort estimate: this is a new toolchain (Vega CLI + RN wrapper + VPKG build).
+Budget a few hours if you've never touched it. The sample apps
+(github.com/AmazonAppDev/react-native-hello-world) are the fastest starting point —
+clone one, swap the WebView URI to your SPOTLIGHT `/tv` URL, rebuild.
+
 ## Path 2: Silk browser — fastest on-device check, zero packaging
 
 Every Fire TV Stick ships Amazon's Silk browser. Open `http://<host-ip>:8000/tv`
