@@ -129,6 +129,21 @@ async def set_active_beat(payload: Dict[str, str]):
     }
 
 
+@app.get("/api/companion/summary")
+async def companion_summary():
+    """Learning Companion: per-topic counts + suggested 60-second explainer."""
+    return session_manager.get_summary()
+
+
+@app.get("/api/companion/explainer/{topic}")
+async def companion_explainer(topic: str):
+    """Learning Companion: fetch the 60-second explainer for a topic."""
+    exp = session_manager.get_explainer(topic)
+    if not exp:
+        return {"status": "not_found", "topic": topic}
+    return {"status": "ok", **exp}
+
+
 @app.post("/api/ask")
 async def handle_ask(req: AskRequest):
     """Core Ask flow:
