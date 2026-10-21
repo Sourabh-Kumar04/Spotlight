@@ -2,11 +2,54 @@
 
 How to run the SPOTLIGHT web app on a Fire TV device or the official simulator.
 
-## Option A: Fire TV Simulator (no hardware)
+## Path 1 (recommended): Amazon's official web-app submission — works on ALL Fire TV devices
+
+Amazon accepts HTML5 web apps directly into the Appstore — no native code needed.
+You submit your app's URL (or a .zip) through the Developer Console and Amazon
+wraps it in their Chromium-based Web App Runtime. This is the only path that also
+works on the newest Fire TV Sticks running Vega OS (see the Vega OS note below).
+
+1. Host SPOTLIGHT at a public HTTPS URL (the `/tv` page is the entry point).
+2. Install **Web App Tester** from the Amazon Appstore onto your Fire TV device —
+   it lets you preview your web app in a production-like environment and debug it
+   before submitting.
+3. In Web App Tester, enter your app name + URL and verify the 10-foot UI,
+   D-pad navigation, and spoken answers on the real device.
+4. Submit via the Developer Console (developer.amazon.com): guided flow, then
+   Amazon reviews (typically 24–72h for TV apps).
+
+**Appstore review requirements that apply to us:**
+- Every screen must be navigable with the Fire TV remote's D-pad — no touch/mouse-only flows.
+- App must launch within ~5 seconds on a first-run test device.
+- Privacy policy URL + data-handling statements are mandatory.
+- Amazon expects testing on a physical Fire TV device, not just an emulator.
+
+## Path 2: Silk browser — fastest on-device check, zero packaging
+
+Every Fire TV Stick ships Amazon's Silk browser. Open `http://<host-ip>:8000/tv`
+(or your hosted URL) in Silk. Works on Fire OS and Vega OS alike. Good enough to
+verify the real 10-foot experience and record B-roll; not a store listing.
+
+## Path 3: WebView wrapper APK sideload — Fire OS (Android) devices ONLY
+
+`firetv/` contains a WebView wrapper skeleton (AndroidManifest.xml + MainActivity.java)
+that loads your SPOTLIGHT URL fullscreen.
+
+1. Build the APK in Android Studio.
+2. Fire TV Stick → Settings → My Fire TV → Developer Options → enable **ADB debugging**
+   and **Apps from Unknown Sources** (unlock Developer Options by clicking the device
+   name 7x under My Fire TV → About, if hidden).
+3. `adb connect <stick-ip>:5555`, then `adb install` the APK — or install the
+   **Downloader** app from the Appstore and fetch the APK by URL.
+
+**Vega OS warning:** Amazon's newest Fire TV Sticks run Vega OS (Linux-based, not
+Android). Vega OS devices **cannot sideload APKs at all** — Path 3 does not work on
+them; use Path 1 (official web-app submission) or Path 2 (Silk) instead.
+
+## Path 4: Fire TV Simulator (no hardware)
 
 1. Install Android Studio and create a virtual device with the **Fire TV** system image
-   (API 28+, `amazon.firetv` tag), or use the standalone Amazon Fire TV simulator
-   if provided for the hackathon.
+   (API 28+, `amazon.firetv` tag).
 2. On the host machine, run the app:
    ```
    python3 -m uvicorn spotlight.main:app --host 0.0.0.0 --port 8000
@@ -17,16 +60,8 @@ How to run the SPOTLIGHT web app on a Fire TV device or the official simulator.
    Arrow keys on your keyboard drive the same focus model as the Fire TV D-pad.
 
 **Verified:** desktop Chrome at 1920x1080, keyboard D-pad navigation.
-**Not yet verified:** on the official Fire TV simulator image (no image available in this sandbox).
-
-## Option B: Physical Fire TV Stick (4K / 4K Max)
-
-1. Fire TV Stick → Settings → My Fire TV → Developer Options → enable **ADB debugging**
-   and **Apps from Unknown Sources**.
-2. `adb connect <stick-ip>:5555`, then sideload a WebView wrapper APK
-   (see `firetv/` for the wrapper skeleton) that loads your hosted SPOTLIGHT URL.
-3. Or simply open the Silk browser on the stick and navigate to your hosted URL —
-   zero packaging needed for the demo.
+**Not yet verified:** on the official Fire TV simulator image, or any physical
+Fire TV hardware (no device available in this sandbox).
 
 ## The phone remote
 
@@ -39,3 +74,5 @@ backend the TV polls. For the demo video, `/demo` shows TV + remote side by side
 - The demo video is recorded from `/demo?demo=1` (deterministic, zero network dependency).
 - Voice input (mic button) requires a secure context: `https://` or `localhost`.
   On plain-HTTP LAN it hides itself with an explanatory note.
+- Spoken answers use the browser's built-in speech engine — expected to work in
+  Silk and Amazon's Web App Runtime, unverified on-device.
