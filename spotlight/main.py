@@ -5,7 +5,9 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi import Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from spotlight import config
 from spotlight.engines.router import knowledge_router
+from spotlight.vision import analyze_frame
 from spotlight.models import AskRequest, BeatId, TVStatus
 from spotlight.session import session_manager
 from spotlight.state import state_manager
@@ -142,6 +145,24 @@ async def companion_explainer(topic: str):
     if not exp:
         return {"status": "not_found", "topic": topic}
     return {"status": "ok", **exp}
+
+
+class FrameAnalysisRequest(BaseModel):
+    image_b64: str  # base64-encoded JPEG/PNG, avoids multipart dependency
+
+
+@app.post("/api/analyze-frame")
+async def analyze_frame_endpoint(req: FrameAnalysisRequest):
+    """Frame analysis: send a base64 TV frame, get scene understanding + suggested question."""
+    import base64 as _b64
+    try:
+        data = _b64.b64decode(req.image_b64)
+    except Exception:
+        return {"status": "error", "detail": "invalid base64"}
+    if not data or len(data) > 8 * 1024 * 1024:
+        return {"status": "error", "detail": "empty file or over 8MB limit"}
+    result = analyze_frame(data)
+    return {"status": "ok", **result}
 
 
 @app.post("/api/ask")

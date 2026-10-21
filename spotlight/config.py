@@ -16,6 +16,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+# AWS Bedrock (preferred LLM provider; graceful fallback when unavailable)
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+BEDROCK_MODEL = os.getenv("BEDROCK_MODEL", "amazon.nova-lite-v1:0")
+BEDROCK_VISION_MODEL = os.getenv("BEDROCK_VISION_MODEL", "amazon.nova-lite-v1:0")
+
+# Google Fact Check API (news beat live verdicts)
+FACTCHECK_API_KEY = os.getenv("FACTCHECK_API_KEY", "")
+
+# Ollama vision model for frame analysis
+OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava")
+
 # Predefined Scenes (Beat 1 to Beat 4)
 SCENES: Dict[BeatId, SceneData] = {
     BeatId.KIDS: SceneData(

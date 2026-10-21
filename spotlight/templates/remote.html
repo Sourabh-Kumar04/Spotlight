@@ -59,6 +59,18 @@
       <textarea id="questionInput" class="question-textarea" rows="2" placeholder="Ask anything about what is on screen...">{{ scene.default_question }}</textarea>
     </section>
 
+    <!-- VOICE + LANGUAGE ROW -->
+    <section class="voice-lang-row" style="display:flex;gap:10px;margin-bottom:12px;">
+      <button id="micBtn" class="btn-action-secondary" type="button" style="flex:1;display:none;"
+              aria-label="Voice input">MIC: TAP TO SPEAK</button>
+      <select id="langSelect" class="btn-action-secondary" style="flex:1;background:#0f172a;color:#e2e8f0;"
+              aria-label="Answer language">
+        <option value="en">English</option>
+        <option value="es">Espa&#241;ol</option>
+        <option value="hi">हिन्दी</option>
+      </select>
+    </section>
+
     <!-- THE ONE BIG ASK BUTTON -->
     <section class="ask-button-container">
       <button id="askBtn" class="big-ask-btn" type="button" aria-label="Ask Spotlight to freeze TV and answer">

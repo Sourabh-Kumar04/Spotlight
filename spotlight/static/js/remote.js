@@ -28,6 +28,10 @@
     movie: "Who is that guy and why is everyone mad at him?",
     sports: "Why was that a foul?",
     news: "Is that claim true?",
+    cooking: "What spice did they just add?",
+    esports: "Why did they lose that fight?",
+    shopping: "What shoes is he wearing?",
+    language: "What did they just say?",
   };
 
   // Setup WebSocket connection
@@ -243,4 +247,52 @@
   // Initial Sync
   connectWS();
   loadHistory();
+
+  // ---- Voice input (Web Speech API) with graceful fallback ----
+  const micBtn = document.getElementById("micBtn");
+  const langSelect = document.getElementById("langSelect");
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const isSecureCtx = window.isSecureContext;
+  if (SpeechRec && isSecureCtx && micBtn) {
+    micBtn.style.display = "block";
+    const rec = new SpeechRec();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    micBtn.addEventListener("click", () => {
+      micBtn.textContent = "LISTENING...";
+      try { rec.start(); } catch (e) { /* already started */ }
+    });
+    rec.onresult = (e) => {
+      const text = e.results[0][0].transcript;
+      if (questionInput) questionInput.value = text;
+      micBtn.textContent = "MIC: TAP TO SPEAK";
+    };
+    rec.onerror = rec.onend = () => { micBtn.textContent = "MIC: TAP TO SPEAK"; };
+  } else if (micBtn) {
+    micBtn.style.display = "block";
+    micBtn.disabled = true;
+    micBtn.textContent = "MIC UNAVAILABLE (NEEDS HTTPS)";
+    micBtn.title = "Voice input needs a secure context (https or localhost).";
+  }
+
+  // ---- Language selector -> included in ask payload ----
+  window.__spotlightLang = "en";
+  if (langSelect) {
+    langSelect.addEventListener("change", () => {
+      window.__spotlightLang = langSelect.value;
+    });
+  }
+  // patch ask payload: wrap fetch if it exists
+  const _origFetch = window.fetch;
+  window.fetch = function (url, opts) {
+    try {
+      if (typeof url === "string" && url.includes("/api/ask") && opts && opts.body) {
+        const body = JSON.parse(opts.body);
+        if (!body.lang) body.lang = window.__spotlightLang || "en";
+        opts.body = JSON.stringify(body);
+      }
+    } catch (e) { /* leave untouched */ }
+    return _origFetch.call(this, url, opts);
+  };
+
 })();

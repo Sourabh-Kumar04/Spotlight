@@ -1,9 +1,10 @@
 """LLM Fallback Engine for free-form questions.
 
-Supports:
-1. Ollama (default: llama3.2:3b at http://localhost:11434)
+Supports (in priority order):
+1. AWS Bedrock (Nova/Claude) via standard credential chain
 2. OpenAI provider via OPENAI_API_KEY and OPENAI_BASE_URL
-3. Resilient contextual synthesis fallback when local/remote LLM is unreachable.
+3. Ollama (default: llama3.2:3b at http://localhost:11434)
+4. Resilient contextual synthesis fallback when all LLMs are unreachable.
 """
 
 import json
@@ -53,13 +54,25 @@ class LLMFallbackEngine:
         self.openai_key = config.OPENAI_API_KEY
         self.openai_base_url = config.OPENAI_BASE_URL.rstrip("/")
         self.openai_model = config.OPENAI_MODEL
+        self.bedrock_region = getattr(config, "AWS_REGION", "us-east-1")
+        self.bedrock_model = getattr(config, "BEDROCK_MODEL", "amazon.nova-lite-v1:0")
+        self._bedrock_available: bool | None = None
 
     async def generate_answer(
         self, question: str, scene: SceneData, timeout: float = 3.5
     ) -> AnswerPayload:
         start_time = time.perf_counter()
 
-        # 1. Try OpenAI if API key configured
+        # 1. Try AWS Bedrock first (preferred for the AWS Builder mini-challenge)
+        try:
+            result = await self._call_bedrock(question, scene, timeout)
+            if result:
+                latency = (time.perf_counter() - start_time) * 1000.0
+                return self._build_payload(result, question, scene, latency, "llm_bedrock")
+        except Exception as e:
+            logger.info(f"Bedrock unavailable, continuing fallback chain: {e}")
+
+        # 2. Try OpenAI if API key configured
         if self.openai_key:
             try:
                 result = await self._call_openai(question, scene, timeout)
@@ -81,6 +94,50 @@ class LLMFallbackEngine:
         # 3. Graceful heuristic contextual synthesis (guaranteed zero crash fallback)
         latency = (time.perf_counter() - start_time) * 1000.0
         return self._contextual_synthesis(question, scene, latency)
+
+    def _bedrock_client(self):
+        """Lazy boto3 client; None if boto3/credentials unavailable (cached)."""
+        if self._bedrock_available is False:
+            return None
+        try:
+            import boto3
+            client = boto3.client("bedrock-runtime", region_name=self.bedrock_region)
+            # cheap credential check without a model call
+            client.list_foundation_models(maxResults=1)
+            self._bedrock_available = True
+            return client
+        except Exception:
+            self._bedrock_available = False
+            return None
+
+    async def _call_bedrock(
+        self, question: str, scene: SceneData, timeout: float = 3.5
+    ) -> dict | None:
+        import asyncio
+        import json as _json
+
+        client = self._bedrock_client()
+        if not client:
+            return None
+        system = SYSTEM_PROMPT_TEMPLATE.format(
+            channel=scene.channel, title=scene.title, category=scene.category,
+            timestamp=scene.timestamp, context_summary=scene.context_summary,
+        )
+        body = _json.dumps({
+            "messages": [{"role": "user", "content": [{"text": system + "\n\nQuestion: " + question}]}],
+            "inferenceConfig": {"maxTokens": 600, "temperature": 0.3},
+        })
+
+        def _invoke():
+            resp = client.invoke_model(modelId=self.bedrock_model, body=body)
+            out = _json.loads(resp["body"].read())
+            return out["output"]["message"]["content"][0]["text"]
+
+        text = await asyncio.wait_for(asyncio.to_thread(_invoke), timeout=timeout + 10)
+        start, end = text.find("{"), text.rfind("}") + 1
+        if start == -1 or end <= start:
+            return None
+        return _json.loads(text[start:end])
 
     async def _call_ollama(
         self, question: str, scene: SceneData, timeout: float
