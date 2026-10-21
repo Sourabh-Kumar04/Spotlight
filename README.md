@@ -12,6 +12,10 @@ You're watching TV. Something happens on screen that confuses you:
 - A character re-appears after 40 minutes, and you can't remember their name.
 - Your kid asks why the sky is blue during a nature documentary.
 - A broadcast makes an astonishing historical claim.
+- The chef adds a mystery spice — and the recipe builds itself.
+- Your team loses the fight and you need the coach's breakdown.
+- The lead's sneakers get a 3-second close-up — what are they?
+- The drama switches to Spanish mid-scene — what did she just say?
 
 You don't want to type a query into a sluggish TV keyboard or open a mobile browser and search through search engine clutter.
 
@@ -20,6 +24,26 @@ You don't want to type a query into a sluggish TV keyboard or open a mobile brow
 2. **Telemetry & Visual Analysis:** The backend analyzes the broadcast metadata, frame timecode, and question.
 3. **High-Contrast 10-Foot Overlay:** A big-type, high-contrast overlay explains the answer in seconds on the TV screen.
 4. **Learning Companion Seed:** The system captures your curiosity query into a persistent profile (*"You've asked about fouls twice this week"*).
+
+---
+
+## Feature Map (8 beats)
+
+| # | Beat | Question | Engine |
+|---|------|----------|--------|
+| 1 | Kids documentary | Why is the sky blue? | Rayleigh scattering explainer, read-aloud |
+| 2 | Movies | Who is that guy...? | Character catch-up card |
+| 3 | Sports (soccer) | Why was that a foul? | IFAB Law 12 ruling |
+| 4 | News | Is that claim true? | Fact-check (live API or curated) |
+| 5 | Cooking | What spice did they just add? | Recipe auto-builder |
+| 6 | Esports | Why did they lose that fight? | Coach's breakdown |
+| 7 | Shopping | What shoes is he wearing? | Shoppable card (demo catalog) |
+| 8 | Language | What did they just say? | ES→EN translation + context |
+
+Plus: **voice input** (mic button, Web Speech API), **3 languages** (EN/ES/HI),
+**frame analysis** (`POST /api/analyze-frame`), **learning companion**
+(60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama
+→ curated** LLM fallback chain.
 
 ---
 

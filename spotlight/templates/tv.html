@@ -151,12 +151,25 @@
       </div>
     </article>
 
+      <!-- Extended beats: generic cinematic scene -->
+      <section id="sceneExtended" class="scene-extended" style="{% if state.current_beat.value not in ['cooking','esports','shopping','language'] %}display:none;{% endif %} width:100%; height:100%; background: radial-gradient(ellipse at 50% 30%, #1e1b4b 0%, #0f0d24 55%, #060510 100%);">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
+          <div style="font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.35em;color:#818cf8;">SPOTLIGHT EXTENDED</div>
+          <div style="font-size:2.2rem;font-weight:700;color:#f1f5f9;">{{ scene.title if scene else '' }}</div>
+          <div style="font-size:1rem;color:#94a3b8;">{{ scene.channel if scene else '' }} &middot; {{ scene.category if scene else '' }}</div>
+        </div>
+      </section>
+
     <!-- TV Key Controls (for demo navigation) -->
     <nav class="tv-control-bar">
       <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'kids'})})">[1] Kids</span>
       <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'movie'})})">[2] Movie</span>
       <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'sports'})})">[3] Sports</span>
       <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'news'})})">[4] News</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'cooking'})})">[5] Cooking</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'esports'})})">[6] Esports</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'shopping'})})">[7] Shop</span>
+      <span class="key-hint" onclick="fetch('/api/beat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({beat_id:'language'})})">[8] Lang</span>
       <span class="key-hint" onclick="fetch('/api/dismiss', {method:'POST'})">[Space/Enter] Resume</span>
     </nav>
 
