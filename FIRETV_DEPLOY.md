@@ -64,9 +64,12 @@ and Linux** — it runs in WSL. You need Node 20+, JDK 21, Python 3.
    ```
 4. Build the wrapper (`npm run build:release` → `build/x86_64-release/*.vpkg`
    on x86_64 Linux) and install it on the running virtual device:
+   ```bash
+   cd spotlight/vega-wrapper
+   npm run build:release
+   vega run-app build/x86_64-release/spotlighttv_x86_64.vpkg
    ```
-   vega run-app build/x86_64-release/<app>_x86_64.vpkg
-   ```
+   (The release package `spotlighttv_x86_64.vpkg` is pre-built in `spotlight/vega-wrapper/build/x86_64-release/`).
 5. Screen-record the virtual device window while you drive the demo
    (the `/remote` page on your phone/laptop talks to the same backend).
 
