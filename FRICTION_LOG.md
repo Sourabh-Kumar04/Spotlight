@@ -41,16 +41,17 @@ Real friction encountered while building. Submitted for the Amazon "Build, Ship,
   curated fallback. Live-verdict UI badge distinguishes LIVE vs CURATED sources.
 - **Severity:** Low.
 - **Workaround:** Curated canonical answer for the demo question; live path activates when the key is present.
-- **Suggestion:** None — the key flow itself is fine; the gap was time, not the API.
+- **Suggestion:** A one-click test key for hackathon entrants would let more teams demo the live
+  path instead of shipping curated fallbacks.
 
-## F-05 — agy agent quota exhausted mid-build (improvement pass)
+## F-05 — Autonomous build-agent quota exhausted mid-build (improvement pass)
 - **Attempted:** Run the 10-item improvement pass as an autonomous agent job.
 - **Expected:** Agent builds all 10 workstreams.
-- **Actual:** `RESOURCE_EXHAUSTED (429): Individual quota reached` — verified real via a trivial PONG test job
-  (not the stale-quota false positive seen on 2026-10-20). Reset window fell after the hackathon deadline.
+- **Actual:** `RESOURCE_EXHAUSTED (429): Individual quota reached` — verified real via a trivial
+  no-op test job. Reset window fell after the hackathon deadline.
 - **Severity:** High (for schedule, not for code).
-- **Workaround:** Built all 10 items directly through the gateway API instead of the agent — slower, but shippable.
-- **Suggestion:** N/A (platform-level, not Amazon's).
+- **Workaround:** Built all 10 items manually instead — slower, but shippable.
+- **Suggestion:** N/A (build-tooling level, not Amazon's).
 
 ## F-06 — Web Speech API requires HTTPS or localhost
 - **Attempted:** Voice input on the phone remote via the Web Speech API.
