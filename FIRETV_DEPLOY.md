@@ -32,9 +32,21 @@ device or the Fire TV/Vega simulator" demo-video requirement without hardware.
 Prerequisites (from Amazon's docs): Vega SDK is available for **Mac (Intel & M-series)
 and Linux** — it runs in WSL. You need Node 20+, JDK 21, Python 3.
 
-1. Install the Vega SDK + developer tools:
-   https://developer.amazon.com/docs/vega/0.21/setup-overview
-   (includes the Vega CLI, Vega Virtual Device, and Vega Studio for VS Code)
+1. Install the Vega SDK + developer tools in WSL:
+   - Needs Node 20+, JDK 21 (Eclipse Temurin 21), and Python 3.
+   - On WSL2, set `TMPDIR=$HOME/tmp` to ensure sufficient disk space during VVD extraction:
+     ```bash
+     mkdir -p "$HOME/tmp" && export TMPDIR="$HOME/tmp"
+     curl -fsSL https://sdk-installer.vega.labcollab.net/get_vvm.sh | bash
+     source ~/vega/env
+     vega sdk install 0.24.12112
+     ```
+   - WSLg display setup:
+     ```bash
+     export DISPLAY=:0
+     export WAYLAND_DISPLAY=wayland-0
+     export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+     ```
 2. Start the simulator:
    ```
    vega virtual-device start --gui
