@@ -195,6 +195,7 @@ async def handle_ask(req: AskRequest):
         custom_scene=scene,
         lang=getattr(req, "lang", "en") or "en",
         context_title=req.context_title,
+        frame_b64=req.frame_b64,
     )
 
     # 3. Log to session history

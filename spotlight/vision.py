@@ -20,17 +20,27 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
-def _pil_heuristic(image_bytes: bytes) -> Dict[str, Any]:
+def _pil_heuristic(image_bytes: bytes, question: Optional[str] = None) -> Dict[str, Any]:
     """Cheap local analysis: colors, brightness, aspect, naive scene guess."""
     if not PIL_AVAILABLE:
         return {
             "scene_type": "unknown",
             "notable_elements": [],
-            "suggested_question": "What is happening in this scene?",
+            "suggested_question": question or "What is happening in this scene?",
             "provider": "none",
             "note": "PIL not installed; install pillow for local heuristics.",
         }
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    try:
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except Exception as e:
+        return {
+            "scene_type": "unknown image format",
+            "notable_elements": ["unidentified image bytes"],
+            "suggested_question": question or "What is happening in this scene?",
+            "provider": "pil-heuristic",
+            "note": f"Failed to parse image: {e}",
+        }
+
     w, h = img.size
     stat = ImageStat.Stat(img)
     r, g, b = [int(v) for v in stat.mean]
@@ -54,13 +64,13 @@ def _pil_heuristic(image_bytes: bytes) -> Dict[str, Any]:
     return {
         "scene_type": scene_guess,
         "notable_elements": elements,
-        "suggested_question": "What just happened in this scene?",
+        "suggested_question": question or "What just happened in this scene?",
         "provider": "pil-heuristic",
         "note": "Local heuristic only — connect Bedrock or Ollama vision for real understanding.",
     }
 
 
-def _bedrock_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
+def _bedrock_vision(image_bytes: bytes, question: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Try AWS Bedrock vision. Returns None on any failure."""
     try:
         import boto3
@@ -71,14 +81,21 @@ def _bedrock_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
         region = os.getenv("AWS_REGION", "us-east-1")
         model = os.getenv("BEDROCK_VISION_MODEL", "amazon.nova-lite-v1:0")
         client = boto3.client("bedrock-runtime", region_name=region)
+        prompt_text = (
+            f"The viewer is watching TV and asks: '{question}'. Answer what is visible on this TV frame. "
+            "Describe what is visible; identify people/objects only when confident; say so when unsure. "
+            'Reply as JSON: {"scene": "...", "elements": ["..."], "answer": "...", "question": "..."}'
+        ) if question else (
+            "Describe this TV frame in one sentence. Then suggest the single most "
+            "interesting question a viewer would ask about it. Reply as JSON: "
+            '{"scene": "...", "question": "...", "elements": ["..."]}'
+        )
         body = {
             "messages": [{
                 "role": "user",
                 "content": [
                     {"image": {"format": "png", "source": {"bytes": base64.b64encode(image_bytes).decode()}}},
-                    {"text": "Describe this TV frame in one sentence. Then suggest the single most "
-                             "interesting question a viewer would ask about it. Reply as JSON: "
-                             '{"scene": "...", "question": "...", "elements": ["..."]}'},
+                    {"text": prompt_text},
                 ],
             }],
             "inferenceConfig": {"maxTokens": 300},
@@ -93,7 +110,8 @@ def _bedrock_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
         return {
             "scene_type": parsed.get("scene", "live TV frame"),
             "notable_elements": parsed.get("elements", []),
-            "suggested_question": parsed.get("question", "What just happened in this scene?"),
+            "suggested_question": parsed.get("question", question or "What just happened in this scene?"),
+            "answer": parsed.get("answer"),
             "provider": "bedrock-vision",
             "note": "",
         }
@@ -101,7 +119,7 @@ def _bedrock_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _ollama_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
+def _ollama_vision(image_bytes: bytes, question: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Try Ollama llava. Returns None on any failure."""
     try:
         import base64
@@ -112,9 +130,14 @@ def _ollama_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
     try:
         host = os.getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
         model = os.getenv("OLLAMA_VISION_MODEL", "llava")
+        prompt_text = (
+            f'The TV viewer asks: "{question}". Describe what is visible in this frame; identify people/objects only when confident; say so when unsure. Reply as JSON: {{"scene": "...", "elements": ["..."], "answer": "..."}}'
+        ) if question else (
+            'Describe this TV frame in one sentence and suggest one interesting viewer question. Reply as JSON: {"scene": "...", "question": "..."}'
+        )
         payload = _json.dumps({
             "model": model,
-            "prompt": 'Describe this TV frame in one sentence and suggest one interesting viewer question. Reply as JSON: {"scene": "...", "question": "..."}',
+            "prompt": prompt_text,
             "images": [base64.b64encode(image_bytes).decode()],
             "stream": False,
         }).encode()
@@ -126,8 +149,9 @@ def _ollama_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
         parsed = _json.loads(text[start:end]) if start != -1 and end > start else {}
         return {
             "scene_type": parsed.get("scene", "live TV frame"),
-            "notable_elements": [],
-            "suggested_question": parsed.get("question", "What just happened in this scene?"),
+            "notable_elements": parsed.get("elements", []),
+            "suggested_question": parsed.get("question", question or "What just happened in this scene?"),
+            "answer": parsed.get("answer"),
             "provider": "ollama-vision",
             "note": "",
         }
@@ -135,13 +159,13 @@ def _ollama_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
         return None
 
 
-def analyze_frame(image_bytes: bytes) -> Dict[str, Any]:
+def analyze_frame(image_bytes: bytes, question: Optional[str] = None) -> Dict[str, Any]:
     """Run the provider chain and return the first successful analysis."""
     for provider in (_bedrock_vision, _ollama_vision):
         try:
-            result = provider(image_bytes)
+            result = provider(image_bytes, question=question)
         except Exception:
             result = None
         if result:
             return result
-    return _pil_heuristic(image_bytes)
+    return _pil_heuristic(image_bytes, question=question)

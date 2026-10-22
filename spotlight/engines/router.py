@@ -1,7 +1,7 @@
 """Router and resolution orchestrator for the 4 Knowledge Engines and LLM Fallback."""
 
 import time
-from typing import Dict
+from typing import Dict, Optional
 from spotlight import config
 from spotlight.engines.base import BaseKnowledgeEngine
 from spotlight.engines.kids import KidsEngine
@@ -38,6 +38,7 @@ class KnowledgeRouter:
         force_llm: bool = False,
         lang: str = "en",
         context_title: str | None = None,
+        frame_b64: str | None = None,
     ) -> AnswerPayload:
         """Resolves a question using canonical curated engines or LLM fallback."""
         start_time = time.perf_counter()
@@ -53,10 +54,57 @@ class KnowledgeRouter:
             answer.latency_ms = round(latency, 2)
             return answer
 
+        # Vision path: when frame_b64 is present and no canonical engine claimed the question
+        if frame_b64:
+            return await self._resolve_vision(
+                clean_question,
+                scene,
+                frame_b64,
+                context_title=context_title,
+                start_time=start_time,
+            )
+
         # Otherwise route to LLM fallback
         answer = await llm_fallback_engine.generate_answer(
             clean_question, scene, context_title=context_title
         )
+        return answer
+
+    async def _resolve_vision(
+        self,
+        question: str,
+        scene: SceneData,
+        frame_b64: str,
+        context_title: Optional[str] = None,
+        start_time: Optional[float] = None,
+    ) -> AnswerPayload:
+        if start_time is None:
+            start_time = time.perf_counter()
+
+        import base64
+        from spotlight.vision import analyze_frame
+
+        raw_b64 = frame_b64.strip()
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",", 1)[1]
+
+        try:
+            image_bytes = base64.b64decode(raw_b64)
+        except Exception:
+            image_bytes = b""
+
+        if not image_bytes:
+            # Invalid image base64; fall through to standard LLM fallback
+            return await llm_fallback_engine.generate_answer(
+                question, scene, context_title=context_title
+            )
+
+        vision_data = analyze_frame(image_bytes, question=question)
+        answer = await llm_fallback_engine.generate_vision_answer(
+            question, scene, vision_data, context_title=context_title
+        )
+        latency = (time.perf_counter() - start_time) * 1000.0
+        answer.latency_ms = round(latency, 2)
         return answer
 
     async def resolve_localized(
@@ -67,10 +115,17 @@ class KnowledgeRouter:
         force_llm: bool = False,
         lang: str = "en",
         context_title: str | None = None,
+        frame_b64: str | None = None,
     ) -> AnswerPayload:
         """Resolve then translate canonical answers to the requested language."""
         answer = await self.resolve(
-            beat_id, question, custom_scene, force_llm, lang, context_title=context_title
+            beat_id,
+            question,
+            custom_scene,
+            force_llm,
+            lang,
+            context_title=context_title,
+            frame_b64=frame_b64,
         )
         return translate_answer(answer, lang)
 

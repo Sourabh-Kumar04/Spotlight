@@ -67,6 +67,31 @@ RULES:
 - Never be partisan or offensive.
 """
 
+VISION_SYSTEM_PROMPT_TEMPLATE = """You are SPOTLIGHT, the intelligent Curiosity Remote knowledge engine for Fire TV.
+The viewer is watching {title} and captured a frame/photo of the TV screen.
+They ask: {question}
+
+VISUAL FRAME ANALYSIS (Provider: {provider}):
+- Scene type: {scene_type}
+- Notable visual elements: {elements_str}
+
+RULES:
+- Answer the user's question directly about what is visible on screen based on the visual analysis.
+- Describe what is visible clearly and honestly.
+- Identify people, characters, or specific objects only when confident; say so when unsure.
+- If the visual analysis only contains palette/exposure heuristics, honestly describe those visual characteristics and state that specific objects or people cannot be identified with certainty from heuristic analysis alone.
+- Respond ONLY with valid raw JSON with keys:
+{{
+  "title": "Concise 3-6 word punchy headline (e.g. 'Screen Frame Analysis')",
+  "subtitle": "VISION ANALYSIS",
+  "verdict_badge": "FRAME DETECTED",
+  "verdict_color": "sky",
+  "primary_explanation": "2-3 clear, honest sentences describing what is visible and answering the viewer's question.",
+  "key_details": ["First visible detail", "Second visible detail", "Third visible detail"],
+  "sources": ["Spotlight Vision Engine ({provider})"]
+}}
+"""
+
 
 class LLMFallbackEngine:
     def __init__(self) -> None:
@@ -484,6 +509,283 @@ class LLMFallbackEngine:
                 latency_ms=round(latency_ms, 1),
                 is_canonical=False,
             )
+
+    async def generate_vision_answer(
+        self,
+        question: str,
+        scene: SceneData,
+        vision_data: Dict[str, Any],
+        timeout: float = 6.0,
+        context_title: Optional[str] = None,
+    ) -> AnswerPayload:
+        start_time = time.perf_counter()
+        provider = vision_data.get("provider", "pil-heuristic")
+
+        # 1. If vision provider already gave a direct answer
+        if vision_data.get("answer"):
+            latency = (time.perf_counter() - start_time) * 1000.0
+            return self._build_vision_payload(
+                {
+                    "title": vision_data.get("scene_type") or f"Frame: {context_title or scene.title}",
+                    "subtitle": "VISION ANALYSIS",
+                    "verdict_badge": "FRAME DETECTED",
+                    "verdict_color": "sky",
+                    "primary_explanation": vision_data["answer"],
+                    "key_details": vision_data.get("notable_elements") or [f"Vision backend: {provider}"],
+                    "sources": [f"Spotlight Vision ({provider})"],
+                },
+                question,
+                scene,
+                latency,
+                provider=provider,
+                context_title=context_title,
+            )
+
+        # 2. Try AWS Bedrock text LLM with vision analysis prompt
+        try:
+            result = await self._call_bedrock_vision(
+                question, scene, vision_data, timeout, context_title=context_title
+            )
+            if result:
+                latency = (time.perf_counter() - start_time) * 1000.0
+                return self._build_vision_payload(
+                    result, question, scene, latency, provider=provider, context_title=context_title
+                )
+        except Exception as e:
+            logger.info(f"Bedrock vision prompt unavailable: {e}")
+
+        # 3. Try OpenAI text LLM with vision analysis prompt
+        if self.openai_key:
+            try:
+                result = await self._call_openai_vision(
+                    question, scene, vision_data, timeout, context_title=context_title
+                )
+                if result:
+                    latency = (time.perf_counter() - start_time) * 1000.0
+                    return self._build_vision_payload(
+                        result, question, scene, latency, provider=provider, context_title=context_title
+                    )
+            except Exception as e:
+                logger.warning(f"OpenAI vision query failed: {e}")
+
+        # 4. Try Ollama (llama3.2:3b)
+        try:
+            result = await self._call_ollama_vision(
+                question, scene, vision_data, timeout, context_title=context_title
+            )
+            if result:
+                latency = (time.perf_counter() - start_time) * 1000.0
+                return self._build_vision_payload(
+                    result, question, scene, latency, provider=provider, context_title=context_title
+                )
+        except Exception as e:
+            logger.info(f"Ollama vision query failed or timed out: {e}")
+
+        # 5. Deterministic contextual vision synthesis fallback (guaranteed zero crash)
+        latency = (time.perf_counter() - start_time) * 1000.0
+        return self._contextual_vision_synthesis(
+            question, scene, vision_data, latency, context_title=context_title
+        )
+
+    def _build_vision_payload(
+        self,
+        data: Dict[str, Any],
+        question: str,
+        scene: SceneData,
+        latency_ms: float,
+        provider: str = "pil-heuristic",
+        context_title: Optional[str] = None,
+    ) -> AnswerPayload:
+        display_title = context_title or scene.title
+        engine_id = f"vision_{provider.replace('-', '_')}"
+        title = data.get("title") or f"Frame: {display_title}"
+        subtitle = data.get("subtitle") or "VISION ANALYSIS"
+        badge = data.get("verdict_badge") or "FRAME DETECTED"
+        color = data.get("verdict_color", "sky")
+        if color not in ["sky", "emerald", "amber", "rose", "purple"]:
+            color = "sky"
+
+        return AnswerPayload(
+            engine_id=engine_id,
+            beat_id=scene.beat_id,
+            question=question,
+            title=title,
+            subtitle=subtitle,
+            verdict_badge=badge,
+            verdict_color=color,
+            primary_explanation=data.get(
+                "primary_explanation",
+                f"Visual frame analysis completed for {display_title} via {provider}.",
+            ),
+            key_details=data.get("key_details", [f"Vision backend: {provider}"]),
+            sources=data.get("sources", [f"Spotlight Vision ({provider})"]),
+            companion_note=f"Learning Companion: Screen capture inquiry for {display_title} logged.",
+            latency_ms=round(latency_ms, 1),
+            is_canonical=False,
+        )
+
+    def _contextual_vision_synthesis(
+        self,
+        question: str,
+        scene: SceneData,
+        vision_data: Dict[str, Any],
+        latency_ms: float,
+        context_title: Optional[str] = None,
+    ) -> AnswerPayload:
+        display_title = context_title or scene.title
+        provider = vision_data.get("provider", "pil-heuristic")
+        scene_type = vision_data.get("scene_type", "visual frame")
+        elements = vision_data.get("notable_elements", [])
+        elements_text = ", ".join(elements) if elements else "visual elements detected"
+
+        explanation = (
+            f"On-screen visual analysis detects a {scene_type} featuring {elements_text}. "
+            "Specific characters or objects are not identified with certainty from heuristic analysis alone."
+        )
+
+        return AnswerPayload(
+            engine_id=f"vision_{provider.replace('-', '_')}",
+            beat_id=scene.beat_id,
+            question=question,
+            title=f"Frame: {display_title}",
+            subtitle="VISION ANALYSIS",
+            verdict_badge="FRAME DETECTED",
+            verdict_color="sky",
+            primary_explanation=explanation,
+            key_details=elements if elements else [f"Scene: {scene_type}", f"Provider: {provider}"],
+            sources=[f"Spotlight Vision ({provider})", f"Broadcast Context: {display_title}"],
+            companion_note=f"Learning Companion: Screen capture inquiry for {display_title} logged.",
+            latency_ms=round(latency_ms, 1),
+            is_canonical=False,
+        )
+
+    async def _call_ollama_vision(
+        self,
+        question: str,
+        scene: SceneData,
+        vision_data: Dict[str, Any],
+        timeout: float,
+        context_title: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        url = f"{self.ollama_host}/api/generate"
+        display_title = context_title or scene.title
+        provider = vision_data.get("provider", "pil-heuristic")
+        scene_type = vision_data.get("scene_type", "visual frame")
+        elements = vision_data.get("notable_elements", [])
+        elements_str = ", ".join(elements) if elements else "none reported"
+
+        system_prompt = VISION_SYSTEM_PROMPT_TEMPLATE.format(
+            title=display_title,
+            question=question,
+            provider=provider,
+            scene_type=scene_type,
+            elements_str=elements_str,
+        )
+
+        payload = {
+            "model": self.ollama_model,
+            "prompt": f"{system_prompt}\n\nUSER QUESTION: {question}\n\nJSON RESPONSE:",
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.2, "num_predict": 300},
+        }
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_text = data.get("response", "").strip()
+                return self._clean_and_parse_json(raw_text)
+        return None
+
+    async def _call_bedrock_vision(
+        self,
+        question: str,
+        scene: SceneData,
+        vision_data: Dict[str, Any],
+        timeout: float,
+        context_title: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        import asyncio
+        import json as _json
+
+        client = self._bedrock_client()
+        if not client:
+            return None
+
+        display_title = context_title or scene.title
+        provider = vision_data.get("provider", "pil-heuristic")
+        scene_type = vision_data.get("scene_type", "visual frame")
+        elements = vision_data.get("notable_elements", [])
+        elements_str = ", ".join(elements) if elements else "none reported"
+
+        system = VISION_SYSTEM_PROMPT_TEMPLATE.format(
+            title=display_title,
+            question=question,
+            provider=provider,
+            scene_type=scene_type,
+            elements_str=elements_str,
+        )
+        body = _json.dumps({
+            "messages": [{"role": "user", "content": [{"text": system + "\n\nQuestion: " + question}]}],
+            "inferenceConfig": {"maxTokens": 600, "temperature": 0.3},
+        })
+
+        def _invoke():
+            resp = client.invoke_model(modelId=self.bedrock_model, body=body)
+            out = _json.loads(resp["body"].read())
+            return out["output"]["message"]["content"][0]["text"]
+
+        text = await asyncio.wait_for(asyncio.to_thread(_invoke), timeout=timeout + 10)
+        start, end = text.find("{"), text.rfind("}") + 1
+        if start == -1 or end <= start:
+            return None
+        return _json.loads(text[start:end])
+
+    async def _call_openai_vision(
+        self,
+        question: str,
+        scene: SceneData,
+        vision_data: Dict[str, Any],
+        timeout: float,
+        context_title: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        url = f"{self.openai_base_url}/chat/completions"
+        display_title = context_title or scene.title
+        provider = vision_data.get("provider", "pil-heuristic")
+        scene_type = vision_data.get("scene_type", "visual frame")
+        elements = vision_data.get("notable_elements", [])
+        elements_str = ", ".join(elements) if elements else "none reported"
+
+        system_prompt = VISION_SYSTEM_PROMPT_TEMPLATE.format(
+            title=display_title,
+            question=question,
+            provider=provider,
+            scene_type=scene_type,
+            elements_str=elements_str,
+        )
+        headers = {
+            "Authorization": f"Bearer {self.openai_key}",
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": self.openai_model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.2,
+            "max_tokens": 400,
+        }
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, headers=headers, json=body)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_text = data["choices"][0]["message"]["content"]
+                return self._clean_and_parse_json(raw_text)
+        return None
 
 
 # Global fallback engine instance

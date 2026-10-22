@@ -17,11 +17,19 @@
   const resetBtn = document.getElementById("resetBtn");
   const syncStatus = document.getElementById("syncStatus");
   const beatTabs = document.querySelectorAll(".beat-tab-btn");
+  const snapBtn = document.getElementById("snapBtn");
+  const snapInput = document.getElementById("snapInput");
+  const snapPreviewRow = document.getElementById("snapPreviewRow");
+  const snapThumbnail = document.getElementById("snapThumbnail");
+  const snapFilename = document.getElementById("snapFilename");
+  const snapLabel = document.getElementById("snapLabel");
+  const snapClearBtn = document.getElementById("snapClearBtn");
 
   let currentBeat = "kids";
   let scenesData = {};
   let ws = null;
   let isAsking = false;
+  let currentFrameB64 = null;
 
   // Beat default questions map
   const defaultQuestions = {
@@ -138,6 +146,7 @@
           beat_id: currentBeat,
           question: question,
           context_title: contextTitle || null,
+          frame_b64: currentFrameB64 || null,
           source: "remote",
         }),
       });
@@ -200,12 +209,54 @@
     resetBtn.addEventListener("click", async () => {
       try {
         if (nowWatchingInput) nowWatchingInput.value = "";
+        clearSnap();
         await fetch("/api/reset", { method: "POST" });
         await loadHistory();
       } catch (err) {
         console.error("[Remote] Reset error", err);
       }
     });
+  }
+
+  // Camera / File input handling for "Snap the screen"
+  function clearSnap() {
+    currentFrameB64 = null;
+    if (snapInput) snapInput.value = "";
+    if (snapPreviewRow) snapPreviewRow.style.display = "none";
+    if (snapThumbnail) snapThumbnail.src = "";
+    if (snapLabel) snapLabel.textContent = "Snap the screen";
+  }
+
+  if (snapBtn && snapInput) {
+    snapBtn.addEventListener("click", () => {
+      snapInput.click();
+    });
+
+    snapInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        currentFrameB64 = event.target.result;
+        if (snapThumbnail) snapThumbnail.src = currentFrameB64;
+        if (snapFilename) snapFilename.textContent = file.name || "Screen photo attached";
+        if (snapPreviewRow) snapPreviewRow.style.display = "flex";
+        if (snapLabel) snapLabel.textContent = "Change screen snap";
+
+        if (questionInput) {
+          const val = questionInput.value.trim();
+          if (Object.values(defaultQuestions).includes(val) || val === "") {
+            questionInput.value = "What is on the screen right now?";
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (snapClearBtn) {
+    snapClearBtn.addEventListener("click", clearSnap);
   }
 
   // Load and render history
@@ -295,6 +346,9 @@
         if (!body.lang) body.lang = window.__spotlightLang || "en";
         if (body.context_title === undefined && nowWatchingInput && nowWatchingInput.value.trim()) {
           body.context_title = nowWatchingInput.value.trim();
+        }
+        if (body.frame_b64 === undefined && currentFrameB64) {
+          body.frame_b64 = currentFrameB64;
         }
         opts.body = JSON.stringify(body);
       }

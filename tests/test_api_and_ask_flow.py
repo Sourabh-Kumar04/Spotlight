@@ -294,3 +294,82 @@ def test_api_ask_context_title_severance_pilot():
     assert "ben stiller" in content or "stiller" in content
     assert data["state"]["context_title"] == "Severance"
 
+
+def _generate_test_png_b64(r=220, g=40, b=40, width=80, height=60) -> str:
+    """Helper to generate a base64 encoded PNG for testing."""
+    import base64
+    import io
+    from PIL import Image
+    img = Image.new("RGB", (width, height), color=(r, g, b))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def test_api_analyze_frame_real_image():
+    """POST /api/analyze-frame with a real base64 frame returns scene analysis, not error."""
+    png_b64 = _generate_test_png_b64(r=230, g=50, b=50)
+    res = client.post("/api/analyze-frame", json={"image_b64": png_b64})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert "scene_type" in data
+    assert "provider" in data
+    assert isinstance(data["notable_elements"], list)
+    assert len(data["notable_elements"]) > 0
+
+
+def test_api_ask_with_frame_routes_to_vision():
+    """POST /api/ask with frame_b64 and 'describe what you see' routes to vision engine."""
+    png_b64 = _generate_test_png_b64(r=30, g=180, b=30)
+    res = client.post(
+        "/api/ask",
+        json={
+            "beat_id": "movie",
+            "question": "describe what you see",
+            "frame_b64": png_b64,
+            "source": "remote",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "answered"
+    assert data["answer"]["is_canonical"] is False
+    assert data["answer"]["engine_id"].startswith("vision_")
+    assert data["state"]["is_frozen"] is True
+    assert data["state"]["status"] == "answered"
+
+    # Answer text or key details must reference visual characteristics
+    full_text = (
+        data["answer"]["title"]
+        + " "
+        + data["answer"]["primary_explanation"]
+        + " "
+        + " ".join(data["answer"]["key_details"])
+    ).lower()
+    assert any(
+        kw in full_text
+        for kw in ["palette", "exposure", "green", "frame", "visual", "scene", "color", "indoor", "nature"]
+    )
+
+
+def test_api_ask_canonical_precedence_retained_with_frame():
+    """Canonical engine answers must retain precedence even when frame_b64 is supplied."""
+    png_b64 = _generate_test_png_b64(r=100, g=100, b=240)
+    res = client.post(
+        "/api/ask",
+        json={
+            "beat_id": "movie",
+            "question": "who is that man?",
+            "context_title": "Charade",
+            "frame_b64": png_b64,
+            "source": "remote",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "answered"
+    assert data["answer"]["is_canonical"] is True
+    assert data["answer"]["engine_id"] == "movie_catchup"
+    assert "Cary Grant" in data["answer"]["title"]
+

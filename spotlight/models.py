@@ -46,6 +46,7 @@ class AskRequest(BaseModel):
     source: str = "remote"
     lang: str = "en"  # en | es | hi
     context_title: Optional[str] = None
+    frame_b64: Optional[str] = None
 
 
 class AnswerPayload(BaseModel):

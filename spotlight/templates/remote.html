@@ -80,6 +80,22 @@
       <textarea id="questionInput" class="question-textarea" rows="2" placeholder="Ask anything about what is on screen...">{{ scene.default_question }}</textarea>
     </section>
 
+    <!-- Snap the Screen (Camera / File input) -->
+    <section class="snap-card" style="margin: 0 20px 12px; display: flex; flex-direction: column; gap: 6px;">
+      <input type="file" id="snapInput" accept="image/*" capture="environment" style="display: none;" />
+      <button id="snapBtn" class="btn-action-secondary" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; font-weight: 600; font-size: 0.9rem;" aria-label="Snap the screen">
+        <span id="snapIcon">📷</span>
+        <span id="snapLabel">Snap the screen</span>
+      </button>
+      <div id="snapPreviewRow" style="display: none; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.85); border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 6px 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+          <img id="snapThumbnail" src="" alt="Screen snap" style="width: 34px; height: 34px; object-fit: cover; border-radius: 4px; border: 1px solid #38bdf8;" />
+          <span id="snapFilename" style="font-size: 0.75rem; color: #94a3b8; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 180px;">Screen photo attached</span>
+        </div>
+        <button id="snapClearBtn" type="button" style="background: none; border: none; color: #f43f5e; cursor: pointer; font-size: 0.8rem; font-weight: 600; padding: 4px 8px;">✕ Remove</button>
+      </div>
+    </section>
+
     <!-- VOICE + LANGUAGE ROW -->
     <section class="voice-lang-row" style="display:flex;gap:10px;margin-bottom:12px;">
       <button id="micBtn" class="btn-action-secondary" type="button" style="flex:1;display:none;"
