@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from spotlight import config
 from spotlight.engines.router import knowledge_router
+from spotlight.intent import classify_intent
 from spotlight.vision import analyze_frame
 from spotlight.voice import transcribe_audio_bytes, synthesize_speech
 from spotlight.models import AskRequest, BeatId, TVStatus, VoiceTranscribeRequest, VoiceSpeakRequest
@@ -178,6 +179,9 @@ async def voice_transcribe_endpoint(req: VoiceTranscribeRequest):
 
     loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, transcribe_audio_bytes, audio_bytes, req.mime)
+    # Transcribed text hits the intent router first
+    intent = classify_intent(result.get("text", ""))
+    result["intent"] = intent
     return result
 
 
