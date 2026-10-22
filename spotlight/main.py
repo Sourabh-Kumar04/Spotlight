@@ -9,14 +9,15 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi import Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from spotlight import config
 from spotlight.engines.router import knowledge_router
 from spotlight.vision import analyze_frame
-from spotlight.models import AskRequest, BeatId, TVStatus
+from spotlight.voice import transcribe_audio_bytes, synthesize_speech
+from spotlight.models import AskRequest, BeatId, TVStatus, VoiceTranscribeRequest, VoiceSpeakRequest
 from spotlight.session import session_manager
 from spotlight.state import state_manager
 
@@ -164,6 +165,27 @@ async def analyze_frame_endpoint(req: FrameAnalysisRequest):
         return {"status": "error", "detail": "empty file or over 8MB limit"}
     result = analyze_frame(data)
     return {"status": "ok", **result}
+
+
+@app.post("/api/voice/transcribe")
+async def voice_transcribe_endpoint(req: VoiceTranscribeRequest):
+    """Transcribe user audio base64 using faster-whisper with VAD & ghost-guard."""
+    import base64 as _b64
+    try:
+        audio_bytes = _b64.b64decode(req.audio_b64)
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid_base64", "text": "", "segments": []})
+
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, transcribe_audio_bytes, audio_bytes, req.mime)
+    return result
+
+
+@app.post("/api/voice/speak")
+async def voice_speak_endpoint(req: VoiceSpeakRequest):
+    """Synthesize text to audio/wav using Piper TTS in subprocess mode."""
+    wav_bytes = await synthesize_speech(req.text)
+    return Response(content=wav_bytes, media_type="audio/wav")
 
 
 @app.post("/api/ask")

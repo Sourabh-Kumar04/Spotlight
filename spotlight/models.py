@@ -91,3 +91,18 @@ class SessionHistoryItem(BaseModel):
     latency_ms: float
     companion_note: str
     context_title: Optional[str] = None
+
+
+class VoiceTranscribeRequest(BaseModel):
+    audio_b64: str
+    mime: Optional[str] = "audio/webm; codecs=opus"
+
+
+class VoiceTranscribeResponse(BaseModel):
+    text: str
+    segments: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class VoiceSpeakRequest(BaseModel):
+    text: str
+

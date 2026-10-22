@@ -33,6 +33,12 @@ env/
 .coverage
 htmlcov/
 
+# Models & binaries
+piper/
+*.onnx
+*.onnx.json
+
+
 # IDE & OS
 .vscode/
 .idea/

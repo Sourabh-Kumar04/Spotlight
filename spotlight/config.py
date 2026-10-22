@@ -1,12 +1,27 @@
 """Configuration and predefined scenes for Spotlight."""
 
 import os
+import shutil
 from typing import Dict
 from spotlight.models import BeatId, SceneData
 
 # Server config
 HOST = os.getenv("SPOTLIGHT_HOST", "0.0.0.0")
 PORT = int(os.getenv("SPOTLIGHT_PORT", "8000"))
+
+# Voice configuration (faster-whisper + Piper)
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base.en")
+WHISPER_DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
+WHISPER_COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+
+PIPER_BINARY = os.getenv(
+    "PIPER_BINARY",
+    shutil.which("piper") or os.path.expanduser("~/.local/bin/piper"),
+)
+PIPER_VOICE_MODEL = os.getenv(
+    "PIPER_VOICE_MODEL",
+    os.path.expanduser("~/.local/share/piper/voices/en_US-lessac-medium.onnx"),
+)
 
 # LLM Fallback config
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
