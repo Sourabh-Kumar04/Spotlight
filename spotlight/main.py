@@ -15,6 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from spotlight import config
 from spotlight.engines.router import knowledge_router
+from spotlight.hub import hub
 from spotlight.intent import classify_intent
 from spotlight.vision import analyze_frame
 from spotlight.voice import transcribe_audio_bytes, synthesize_speech
@@ -434,3 +435,21 @@ async def websocket_endpoint(websocket: WebSocket):
         await state_manager.unregister_listener(websocket)
     except Exception:
         await state_manager.unregister_listener(websocket)
+
+
+@app.websocket("/ws/session/{session_id}")
+async def session_websocket_endpoint(websocket: WebSocket, session_id: str):
+    """Minimal WebSocket hub for /ws/session/{session_id}.
+    /remote publishes {kind:"voice_state", state, transcript?} and {kind:"control", action, seconds?};
+    /tv subscribes and reacts.
+    """
+    await hub.connect(session_id, websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            await hub.broadcast(session_id, data, sender=websocket)
+    except WebSocketDisconnect:
+        hub.disconnect(session_id, websocket)
+    except Exception:
+        hub.disconnect(session_id, websocket)
+
