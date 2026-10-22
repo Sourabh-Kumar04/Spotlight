@@ -133,7 +133,7 @@ def _ollama_vision(image_bytes: bytes, question: Optional[str] = None) -> Option
         prompt_text = (
             f'The TV viewer asks: "{question}". Describe what is visible in this frame; identify people/objects only when confident; say so when unsure. Reply as JSON: {{"scene": "...", "elements": ["..."], "answer": "..."}}'
         ) if question else (
-            'Describe this TV frame in one sentence and suggest one interesting viewer question. Reply as JSON: {"scene": "...", "question": "..."}'
+            'Describe this TV frame in one sentence and suggest one interesting viewer question. Reply as JSON: {"scene": "...", "question": "...", "elements": ["..."]}'
         )
         payload = _json.dumps({
             "model": model,
@@ -147,9 +147,10 @@ def _ollama_vision(image_bytes: bytes, question: Optional[str] = None) -> Option
         text = _json.loads(resp.read().decode()).get("response", "")
         start, end = text.find("{"), text.rfind("}") + 1
         parsed = _json.loads(text[start:end]) if start != -1 and end > start else {}
+        elements = parsed.get("elements") or _pil_heuristic(image_bytes).get("notable_elements", [])
         return {
             "scene_type": parsed.get("scene", "live TV frame"),
-            "notable_elements": parsed.get("elements", []),
+            "notable_elements": elements,
             "suggested_question": parsed.get("question", question or "What just happened in this scene?"),
             "answer": parsed.get("answer"),
             "provider": "ollama-vision",
