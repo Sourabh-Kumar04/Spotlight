@@ -92,3 +92,12 @@ def test_voice_transcribe_invalid_base64():
     assert res.status_code == 400
     data = res.json()
     assert "error" in data
+
+
+def test_remote_page_has_push_to_talk_button():
+    """Verify /remote contains the push-to-talk voice button."""
+    res = client.get("/remote")
+    assert res.status_code == 200
+    assert "micBtn" in res.text
+    assert "PUSH TO TALK" in res.text
+

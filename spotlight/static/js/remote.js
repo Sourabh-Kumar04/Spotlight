@@ -303,31 +303,251 @@
   connectWS();
   loadHistory();
 
-  // ---- Voice input (Web Speech API) with graceful fallback ----
+  // ---- Push-to-talk voice Q&A loop (MediaRecorder + faster-whisper + Piper) ----
   const micBtn = document.getElementById("micBtn");
+  const micIcon = document.getElementById("micIcon");
+  const micLabel = document.getElementById("micLabel");
   const langSelect = document.getElementById("langSelect");
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const isSecureCtx = window.isSecureContext;
-  if (SpeechRec && isSecureCtx && micBtn) {
-    micBtn.style.display = "block";
-    const rec = new SpeechRec();
-    rec.lang = "en-US";
-    rec.interimResults = false;
-    micBtn.addEventListener("click", () => {
-      micBtn.textContent = "LISTENING...";
-      try { rec.start(); } catch (e) { /* already started */ }
-    });
-    rec.onresult = (e) => {
-      const text = e.results[0][0].transcript;
-      if (questionInput) questionInput.value = text;
-      micBtn.textContent = "MIC: TAP TO SPEAK";
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let isRecording = false;
+  let activeAudioStream = null;
+  let currentPhoneAudio = null;
+
+  function resetMicUI() {
+    if (micBtn) {
+      micBtn.classList.remove("recording", "processing", "speaking");
+      micBtn.disabled = false;
+    }
+    if (micIcon) micIcon.textContent = "🎙️";
+    if (micLabel) micLabel.textContent = "PUSH TO TALK";
+  }
+
+  function stopPhoneAudio() {
+    if (currentPhoneAudio) {
+      try {
+        currentPhoneAudio.pause();
+        currentPhoneAudio.currentTime = 0;
+      } catch (_) {}
+      currentPhoneAudio = null;
+    }
+  }
+
+  async function speakOnPhone(text) {
+    if (!text || !text.trim()) {
+      resetMicUI();
+      return;
+    }
+    try {
+      if (micBtn) {
+        micBtn.classList.remove("processing");
+        micBtn.classList.add("speaking");
+      }
+      if (micIcon) micIcon.textContent = "🔊";
+      if (micLabel) micLabel.textContent = "SPEAKING ANSWER...";
+
+      const res = await fetch("/api/voice/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text.trim() }),
+      });
+
+      if (!res.ok) {
+        console.warn("[Remote] /api/voice/speak returned status", res.status);
+        resetMicUI();
+        return;
+      }
+
+      const audioBlob = await res.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      stopPhoneAudio();
+      currentPhoneAudio = new Audio(audioUrl);
+      currentPhoneAudio.onended = () => {
+        resetMicUI();
+        URL.revokeObjectURL(audioUrl);
+      };
+      currentPhoneAudio.onerror = (e) => {
+        console.warn("[Remote] Phone audio play error", e);
+        resetMicUI();
+        URL.revokeObjectURL(audioUrl);
+      };
+      await currentPhoneAudio.play();
+    } catch (err) {
+      console.error("[Remote] speakOnPhone error", err);
+      resetMicUI();
+    }
+  }
+
+  async function handleVoiceTranscribeAndAsk(audioBlob) {
+    if (micBtn) {
+      micBtn.classList.remove("recording");
+      micBtn.classList.add("processing");
+    }
+    if (micIcon) micIcon.textContent = "⏳";
+    if (micLabel) micLabel.textContent = "TRANSCRIBING...";
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const resultStr = reader.result;
+        const b64 = resultStr.includes(",") ? resultStr.split(",")[1] : resultStr;
+        const mime = audioBlob.type || "audio/webm; codecs=opus";
+
+        const res = await fetch("/api/voice/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audio_b64: b64, mime: mime }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Transcribe failed: " + res.status);
+        }
+
+        const data = await res.json();
+        const recognizedText = (data.text || "").trim();
+
+        if (!recognizedText) {
+          if (micIcon) micIcon.textContent = "⚠️";
+          if (micLabel) micLabel.textContent = "NO SPEECH DETECTED";
+          setTimeout(resetMicUI, 1800);
+          return;
+        }
+
+        // Put transcribed text into questionInput
+        if (questionInput) questionInput.value = recognizedText;
+
+        if (micLabel) micLabel.textContent = "ASKING SPOTLIGHT...";
+        setAskButtonState(true);
+
+        // Auto-submit to existing /api/ask
+        const askPayload = {
+          beat_id: currentBeat,
+          question: recognizedText,
+          context_title: (nowWatchingInput && nowWatchingInput.value.trim()) || null,
+          frame_b64: currentFrameB64 || null,
+          source: "remote",
+          lang: window.__spotlightLang || "en",
+        };
+
+        const askRes = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(askPayload),
+        });
+
+        if (askRes.ok) {
+          const askData = await askRes.json();
+          if (askData.session_item && askData.session_item.companion_note && companionInsight) {
+            companionInsight.textContent = askData.session_item.companion_note;
+          }
+          await loadHistory();
+
+          // Play synthesized audio on phone
+          if (askData.answer) {
+            const answerSpeechText = `${askData.answer.title || ""}. ${askData.answer.primary_explanation || ""}`.trim();
+            await speakOnPhone(answerSpeechText);
+          } else {
+            resetMicUI();
+          }
+        } else {
+          resetMicUI();
+        }
+      } catch (err) {
+        console.error("[Remote] Voice loop error", err);
+        if (micIcon) micIcon.textContent = "❌";
+        if (micLabel) micLabel.textContent = "VOICE FAILED";
+        setTimeout(resetMicUI, 2000);
+      } finally {
+        setTimeout(() => setAskButtonState(false), 600);
+      }
     };
-    rec.onerror = rec.onend = () => { micBtn.textContent = "MIC: TAP TO SPEAK"; };
-  } else if (micBtn) {
-    micBtn.style.display = "block";
-    micBtn.disabled = true;
-    micBtn.textContent = "MIC UNAVAILABLE (NEEDS HTTPS)";
-    micBtn.title = "Voice input needs a secure context (https or localhost).";
+    reader.readAsDataURL(audioBlob);
+  }
+
+  async function startRecording() {
+    stopPhoneAudio();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Microphone access is not supported or requires a secure context (HTTPS / localhost).");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      activeAudioStream = stream;
+
+      let mimeType = "audio/webm;codecs=opus";
+      if (typeof MediaRecorder !== "undefined") {
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          if (MediaRecorder.isTypeSupported("audio/webm")) {
+            mimeType = "audio/webm";
+          } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+            mimeType = "audio/ogg;codecs=opus";
+          } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+            mimeType = "audio/mp4";
+          } else {
+            mimeType = "";
+          }
+        }
+      }
+
+      const options = mimeType ? { mimeType } : undefined;
+      mediaRecorder = new MediaRecorder(stream, options);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, {
+          type: mediaRecorder.mimeType || mimeType || "audio/webm",
+        });
+        handleVoiceTranscribeAndAsk(audioBlob);
+      };
+
+      mediaRecorder.start(100);
+      isRecording = true;
+
+      if (micBtn) {
+        micBtn.classList.remove("processing", "speaking");
+        micBtn.classList.add("recording");
+      }
+      if (micIcon) micIcon.textContent = "⏹️";
+      if (micLabel) micLabel.textContent = "LISTENING... TAP TO STOP";
+    } catch (err) {
+      console.error("[Remote] Microphone start error", err);
+      alert("Could not access microphone: " + (err.message || err));
+      resetMicUI();
+    }
+  }
+
+  function stopRecording() {
+    if (!isRecording || !mediaRecorder) return;
+    isRecording = false;
+    try {
+      if (mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+    } catch (e) {
+      console.warn("mediaRecorder stop error", e);
+    }
+    if (activeAudioStream) {
+      activeAudioStream.getTracks().forEach((track) => track.stop());
+      activeAudioStream = null;
+    }
+  }
+
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
   }
 
   // ---- Language selector -> included in ask payload ----

@@ -262,6 +262,31 @@ body.remote-body {
   color: #fff;
 }
 
+.btn-action-secondary.recording {
+  background: rgba(244, 63, 94, 0.25) !important;
+  border-color: #f43f5e !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
+  animation: pulse-recording 1.2s infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.85; }
+}
+
+.btn-action-secondary.processing {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}
+
+.btn-action-secondary.speaking {
+  background: rgba(52, 211, 153, 0.2) !important;
+  border-color: #34d399 !important;
+  color: #34d399 !important;
+}
+
 /* Learning Companion Seed Section */
 .companion-drawer {
   margin: 0 20px 20px;

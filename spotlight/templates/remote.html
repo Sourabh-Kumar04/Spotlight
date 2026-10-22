@@ -97,10 +97,13 @@
     </section>
 
     <!-- VOICE + LANGUAGE ROW -->
-    <section class="voice-lang-row" style="display:flex;gap:10px;margin-bottom:12px;">
-      <button id="micBtn" class="btn-action-secondary" type="button" style="flex:1;display:none;"
-              aria-label="Voice input">MIC: TAP TO SPEAK</button>
-      <select id="langSelect" class="btn-action-secondary" style="flex:1;background:#0f172a;color:#e2e8f0;"
+    <section class="voice-lang-row" style="display:flex;gap:10px;margin: 0 20px 12px;">
+      <button id="micBtn" class="btn-action-secondary" type="button" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; font-weight:700;"
+              aria-label="Push to talk voice input">
+        <span id="micIcon">🎙️</span>
+        <span id="micLabel">PUSH TO TALK</span>
+      </button>
+      <select id="langSelect" class="btn-action-secondary" style="flex:0 0 100px;background:#0f172a;color:#e2e8f0;"
               aria-label="Answer language">
         <option value="en">English</option>
         <option value="es">Espa&#241;ol</option>
