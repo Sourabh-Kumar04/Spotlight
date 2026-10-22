@@ -31,6 +31,37 @@
   let isAsking = false;
   let currentFrameB64 = null;
 
+  // --- Session-Isolated WebSocket Hub (/ws/session/{session_id}) ---
+  let sessionWs = null;
+  let speechRec = null;
+  const sessionId = new URLSearchParams(window.location.search).get("session") || "default";
+
+  function connectSessionWS() {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const hubUrl = `${protocol}//${window.location.host}/ws/session/${sessionId}`;
+    sessionWs = new WebSocket(hubUrl);
+
+    sessionWs.onopen = () => {
+      console.log(`[Remote] Connected to session hub: ${sessionId}`);
+    };
+
+    sessionWs.onclose = () => {
+      setTimeout(connectSessionWS, 1500);
+    };
+
+    sessionWs.onerror = () => {
+      sessionWs.close();
+    };
+  }
+
+  function publishHub(msg) {
+    if (sessionWs && sessionWs.readyState === WebSocket.OPEN) {
+      sessionWs.send(JSON.stringify(msg));
+    }
+  }
+
+  connectSessionWS();
+
   // Beat default questions map
   const defaultQuestions = {
     kids: "Why is the sky blue?",
@@ -387,6 +418,8 @@
     if (micIcon) micIcon.textContent = "⏳";
     if (micLabel) micLabel.textContent = "TRANSCRIBING...";
 
+    publishHub({ kind: "voice_state", state: "thinking", transcript: "" });
+
     const reader = new FileReader();
     reader.onloadend = async () => {
       try {
@@ -406,8 +439,10 @@
 
         const data = await res.json();
         const recognizedText = (data.text || "").trim();
+        const intent = data.intent;
 
         if (!recognizedText) {
+          publishHub({ kind: "voice_state", state: "idle" });
           if (micIcon) micIcon.textContent = "⚠️";
           if (micLabel) micLabel.textContent = "NO SPEECH DETECTED";
           setTimeout(resetMicUI, 1800);
@@ -417,6 +452,25 @@
         // Put transcribed text into questionInput
         if (questionInput) questionInput.value = recognizedText;
 
+        // Device commands hit router first!
+        if (intent && intent.type === "command") {
+          console.log("[Remote] Device command classified:", intent);
+          publishHub({
+            kind: "control",
+            action: intent.action,
+            seconds: intent.seconds,
+          });
+          publishHub({ kind: "voice_state", state: "idle" });
+
+          if (micIcon) micIcon.textContent = "⚡";
+          const secStr = intent.seconds ? ` (${intent.seconds}s)` : "";
+          if (micLabel) micLabel.textContent = `COMMAND: ${intent.action.toUpperCase()}${secStr}`;
+          setTimeout(resetMicUI, 1600);
+          return;
+        }
+
+        // Question intent continues to /api/ask pipeline
+        publishHub({ kind: "voice_state", state: "thinking", transcript: recognizedText });
         if (micLabel) micLabel.textContent = "ASKING SPOTLIGHT...";
         setAskButtonState(true);
 
@@ -446,15 +500,24 @@
           // Play synthesized audio on phone
           if (askData.answer) {
             const answerSpeechText = `${askData.answer.title || ""}. ${askData.answer.primary_explanation || ""}`.trim();
+            publishHub({
+              kind: "voice_state",
+              state: "speaking",
+              transcript: askData.answer.title || answerSpeechText.slice(0, 60),
+            });
             await speakOnPhone(answerSpeechText);
+            publishHub({ kind: "voice_state", state: "idle" });
           } else {
+            publishHub({ kind: "voice_state", state: "idle" });
             resetMicUI();
           }
         } else {
+          publishHub({ kind: "voice_state", state: "idle" });
           resetMicUI();
         }
       } catch (err) {
         console.error("[Remote] Voice loop error", err);
+        publishHub({ kind: "voice_state", state: "idle" });
         if (micIcon) micIcon.textContent = "❌";
         if (micLabel) micLabel.textContent = "VOICE FAILED";
         setTimeout(resetMicUI, 2000);
@@ -511,6 +574,31 @@
       mediaRecorder.start(100);
       isRecording = true;
 
+      publishHub({ kind: "voice_state", state: "listening", transcript: "" });
+
+      // Live partial transcript streaming if Web Speech API available
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRec) {
+        try {
+          speechRec = new SpeechRec();
+          speechRec.continuous = true;
+          speechRec.interimResults = true;
+          speechRec.lang = window.__spotlightLang || "en-US";
+          speechRec.onresult = (ev) => {
+            let partial = "";
+            for (let i = ev.resultIndex; i < ev.results.length; ++i) {
+              partial += ev.results[i][0].transcript;
+            }
+            partial = partial.trim();
+            if (partial) {
+              publishHub({ kind: "voice_state", state: "listening", transcript: partial });
+            }
+          };
+          speechRec.onerror = () => {};
+          speechRec.start();
+        } catch (_) {}
+      }
+
       if (micBtn) {
         micBtn.classList.remove("processing", "speaking");
         micBtn.classList.add("recording");
@@ -527,6 +615,10 @@
   function stopRecording() {
     if (!isRecording || !mediaRecorder) return;
     isRecording = false;
+    if (speechRec) {
+      try { speechRec.stop(); } catch (_) {}
+      speechRec = null;
+    }
     try {
       if (mediaRecorder.state !== "inactive") {
         mediaRecorder.stop();

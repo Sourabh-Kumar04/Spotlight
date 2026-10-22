@@ -622,3 +622,99 @@
   color: #94a3b8;
   cursor: pointer;
 }
+
+/* --- Voice Status Pill (Extended from Sound Pill) --- */
+.voice-status-pill {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  max-width: 620px;
+  overflow: hidden;
+}
+
+.voice-status-pill.voice-idle {
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #e2e8f0;
+}
+
+.voice-status-pill.voice-listening {
+  background: rgba(14, 116, 144, 0.88);
+  border-color: #38bdf8;
+  color: #f0f9ff;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.55);
+  animation: voice-pulse 1.4s infinite ease-in-out;
+}
+
+.voice-status-pill.voice-thinking {
+  background: rgba(79, 70, 229, 0.88);
+  border-color: #a855f7;
+  color: #faf5ff;
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.45);
+}
+
+.voice-status-pill.voice-speaking {
+  background: rgba(5, 150, 105, 0.88);
+  border-color: #34d399;
+  color: #ecfdf5;
+  box-shadow: 0 0 25px rgba(52, 211, 153, 0.45);
+}
+
+.voice-pill-indicator {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.voice-status-pill.voice-listening .voice-pill-indicator {
+  animation: voice-dot-pulse 0.8s infinite alternate;
+}
+
+@keyframes voice-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+  50% { transform: scale(1.03); box-shadow: 0 0 30px rgba(56, 189, 248, 0.75); }
+  100% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+}
+
+@keyframes voice-dot-pulse {
+  0% { opacity: 0.35; transform: scale(0.75); }
+  100% { opacity: 1; transform: scale(1.25); }
+}
+
+.voice-pill-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 500px;
+}
+
+.voice-pill-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #34d399;
+  transition: width 0.15s linear;
+  box-shadow: 0 0 8px #34d399;
+}
+

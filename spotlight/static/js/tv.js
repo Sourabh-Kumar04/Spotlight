@@ -71,6 +71,27 @@
     if (preferredVoice) utter.voice = preferredVoice;
     utter.rate = 1.0;
     utter.pitch = 1.0;
+
+    utter.onstart = () => {
+      setVoiceState("speaking", text.slice(0, 60) + (text.length > 60 ? "..." : ""), 10);
+    };
+
+    utter.onboundary = (e) => {
+      if (e.charIndex && text.length) {
+        const pct = Math.min(100, Math.round((e.charIndex / text.length) * 100));
+        updateSpeakingProgress(pct);
+      }
+    };
+
+    utter.onend = () => {
+      updateSpeakingProgress(100);
+      setTimeout(() => setVoiceState("idle"), 400);
+    };
+
+    utter.onerror = () => {
+      setVoiceState("idle");
+    };
+
     window.speechSynthesis.speak(utter);
     updateSoundBadge();
   }
@@ -81,21 +102,94 @@
     updateSoundBadge();
   }
 
-  // Small floating sound toggle, created dynamically (no HTML change needed)
+  // --- Voice Status Pill (Extended from Sound Pill) ---
+  // 4 states: listening (pulsing + live transcript), thinking (question), speaking (answer text + progress), idle.
   let soundBadge = null;
+  let voicePillIndicator = null;
+  let voicePillText = null;
+  let voicePillProgress = null;
+  let currentVoiceState = "idle";
+  let speakingProgressInterval = null;
+
   function updateSoundBadge() {
     if (!soundBadge) {
       soundBadge = document.createElement("button");
       soundBadge.id = "soundToggle";
-      soundBadge.style.cssText =
-        "position:fixed;top:14px;right:16px;z-index:9999;" +
-        "background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,0.25);" +
-        "border-radius:999px;padding:8px 16px;font-size:13px;letter-spacing:0.12em;" +
-        "cursor:pointer;font-family:inherit;";
-      soundBadge.addEventListener("click", toggleSound);
+      soundBadge.className = "voice-status-pill voice-idle";
+
+      voicePillIndicator = document.createElement("span");
+      voicePillIndicator.className = "voice-pill-indicator";
+
+      voicePillText = document.createElement("span");
+      voicePillText.className = "voice-pill-text";
+
+      voicePillProgress = document.createElement("span");
+      voicePillProgress.className = "voice-pill-progress";
+      voicePillProgress.style.width = "0%";
+
+      soundBadge.appendChild(voicePillIndicator);
+      soundBadge.appendChild(voicePillText);
+      soundBadge.appendChild(voicePillProgress);
+
+      soundBadge.addEventListener("click", () => {
+        if (currentVoiceState === "idle") {
+          toggleSound();
+        }
+      });
       document.body.appendChild(soundBadge);
     }
-    soundBadge.textContent = soundOn ? "SOUND: ON" : "SOUND: OFF";
+    renderVoicePillUI();
+  }
+
+  function setVoiceState(state, transcript, progressPct) {
+    currentVoiceState = state || "idle";
+    renderVoicePillUI(transcript, progressPct);
+  }
+
+  function updateSpeakingProgress(pct) {
+    if (voicePillProgress) {
+      voicePillProgress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+    }
+  }
+
+  function renderVoicePillUI(transcript, progressPct) {
+    if (!soundBadge) return;
+
+    soundBadge.classList.remove("voice-idle", "voice-listening", "voice-thinking", "voice-speaking");
+    soundBadge.classList.add(`voice-${currentVoiceState}`);
+
+    if (speakingProgressInterval) {
+      clearInterval(speakingProgressInterval);
+      speakingProgressInterval = null;
+    }
+
+    if (currentVoiceState === "listening") {
+      updateSpeakingProgress(0);
+      const text = transcript ? `LISTENING: "${transcript}"` : "LISTENING...";
+      voicePillText.textContent = text;
+    } else if (currentVoiceState === "thinking") {
+      updateSpeakingProgress(0);
+      const text = transcript ? `THINKING: "${transcript}"` : "THINKING...";
+      voicePillText.textContent = text;
+    } else if (currentVoiceState === "speaking") {
+      const text = transcript ? `SPEAKING: "${transcript}"` : "SPEAKING...";
+      voicePillText.textContent = text;
+      const initialPct = typeof progressPct === "number" ? progressPct : 15;
+      updateSpeakingProgress(initialPct);
+
+      if (typeof progressPct !== "number") {
+        let pct = initialPct;
+        speakingProgressInterval = setInterval(() => {
+          pct = Math.min(95, pct + 5);
+          updateSpeakingProgress(pct);
+        }, 300);
+      }
+    } else {
+      // idle state
+      currentVoiceState = "idle";
+      updateSpeakingProgress(0);
+      voicePillText.textContent = soundOn ? "SOUND: ON" : "SOUND: OFF";
+    }
   }
   updateSoundBadge();
 
@@ -327,6 +421,98 @@
     } catch (_) {}
   }, 2500);
 
+  // --- Session-Isolated WebSocket Hub (/ws/session/{session_id}) ---
+  // Subscribes to /remote voice_state updates and control commands.
+  let sessionWs = null;
+  const sessionId = new URLSearchParams(window.location.search).get("session") || "default";
+
+  function connectSessionWS() {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const hubUrl = `${protocol}//${window.location.host}/ws/session/${sessionId}`;
+
+    sessionWs = new WebSocket(hubUrl);
+
+    sessionWs.onopen = () => {
+      console.log(`[Spotlight TV] Connected to session hub: ${sessionId}`);
+    };
+
+    sessionWs.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        handleSessionMessage(msg);
+      } catch (err) {
+        console.error("[Spotlight TV] Session hub parse error", err);
+      }
+    };
+
+    sessionWs.onclose = () => {
+      console.log("[Spotlight TV] Session hub disconnected. Reconnecting in 1.5s...");
+      setTimeout(connectSessionWS, 1500);
+    };
+
+    sessionWs.onerror = (err) => {
+      console.error("[Spotlight TV] Session hub error", err);
+      sessionWs.close();
+    };
+  }
+
+  function handleSessionMessage(msg) {
+    if (!msg || !msg.kind) return;
+
+    if (msg.kind === "voice_state") {
+      const state = (msg.state || "idle").toLowerCase();
+      setVoiceState(state, msg.transcript);
+    } else if (msg.kind === "control") {
+      executeControl(msg);
+    }
+  }
+
+  // IMPORTANT: NO ADB — this demo runs against a cloud Fire TV the backend cannot reach;
+  // web-page control is the correct substrate.
+  function executeControl(msg) {
+    console.log("[Spotlight TV] Executing web-page device control:", msg);
+    const video = document.querySelector("video") || movieVideo;
+    const action = (msg.action || "").toLowerCase();
+    const seconds = Number(msg.seconds) || 10;
+
+    if (action === "pause") {
+      if (video) video.pause();
+    } else if (action === "play" || action === "resume") {
+      if (video) video.play().catch(() => {});
+      if (currentState.is_frozen) {
+        fetch("/api/dismiss", { method: "POST" }).catch(() => {});
+      }
+    } else if (action === "rewind") {
+      if (video) {
+        video.currentTime = Math.max(0, (video.currentTime || 0) - seconds);
+      }
+    } else if (action === "forward") {
+      if (video) {
+        video.currentTime = Math.min(video.duration || 999999, (video.currentTime || 0) + seconds);
+      }
+    } else if (action === "volume_up" || action === "volume-up") {
+      if (video) {
+        video.muted = false;
+        video.volume = Math.min(1.0, Number(((video.volume || 1.0) + 0.1).toFixed(2)));
+      }
+    } else if (action === "volume_down" || action === "volume-down") {
+      if (video) {
+        video.volume = Math.max(0.0, Number(((video.volume || 1.0) - 0.1).toFixed(2)));
+      }
+    } else if (action === "mute") {
+      if (video) {
+        video.muted = !video.muted;
+      }
+      toggleSound();
+    } else if (action === "go-back" || action === "go_back" || action === "back") {
+      if (currentState.is_frozen || currentState.status === "answered") {
+        stopSpeech();
+        fetch("/api/dismiss", { method: "POST" }).catch(() => {});
+      }
+    }
+  }
+
   // Initialize
   connectWS();
+  connectSessionWS();
 })();
