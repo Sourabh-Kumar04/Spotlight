@@ -31,6 +31,7 @@ class SessionManager:
         is_canonical: bool,
         latency_ms: float,
         custom_note: Optional[str] = None,
+        context_title: Optional[str] = None,
     ) -> SessionHistoryItem:
         # Detect topics
         q_lower = question.lower()
@@ -65,6 +66,7 @@ class SessionManager:
             is_canonical=is_canonical,
             latency_ms=latency_ms,
             companion_note=note,
+            context_title=context_title,
         )
         self.history.append(item)
         return item

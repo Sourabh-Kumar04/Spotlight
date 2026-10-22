@@ -15,7 +15,10 @@
       <div class="channel-brand">
         <span class="brand-dot"></span>
         <div>
-          <div id="hudTitle" class="channel-title">{{ scene.title }}</div>
+          <div class="channel-title">
+            <span id="hudTitle">{{ scene.title }}</span>
+            <span id="hudContextTitle" class="context-title" style="font-size:0.85em; opacity:0.8; font-weight:normal; color:#38bdf8; margin-left:8px; display:{% if state.context_title %}inline{% else %}none{% endif %};">{% if state.context_title %}— {{ state.context_title }}{% endif %}</span>
+          </div>
           <div id="hudChannel" class="channel-subtitle">{{ scene.subtitle or scene.channel }}</div>
         </div>
       </div>

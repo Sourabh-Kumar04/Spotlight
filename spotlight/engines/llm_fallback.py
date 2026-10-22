@@ -46,6 +46,27 @@ RULES:
 - Never be partisan or offensive.
 """
 
+TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE = """You are SPOTLIGHT, the intelligent Curiosity Remote knowledge engine for Fire TV.
+The user is watching {title}. They ask: {question}. Answer concisely and factually about this show/movie — characters, actors, plot, context. If unsure, say so briefly instead of inventing.
+
+Analyze the user's question and generate a structured JSON object with these EXACT keys:
+{{
+  "title": "Concise 3-6 word punchy headline (e.g. 'Walter White & Bryan Cranston')",
+  "subtitle": "Uppercase badge context (e.g. 'CHARACTER INTEL', 'SERIES CONTEXT', 'DIRECTOR & CREW', 'PLOT EXPLAINER')",
+  "verdict_badge": "Brief 2-4 word status tag (e.g. 'LEAD CHARACTER', 'PILOT DIRECTOR', 'KEY PLOT POINT', 'FACT CHECK')",
+  "verdict_color": "one of: 'sky', 'emerald', 'amber', 'rose', 'purple'",
+  "primary_explanation": "2-3 clear, authoritative sentences answering the question directly with high clarity for TV viewing.",
+  "key_details": ["First key insight or context point", "Second key insight or rule", "Third key insight"],
+  "sources": ["Primary authority or reference 1", "Primary reference 2"]
+}}
+
+RULES:
+- Respond ONLY with valid raw JSON. No markdown code blocks, no trailing conversation.
+- Keep explanation clear, engaging, and suitable for a big-screen TV overlay.
+- Answer concisely and factually about this show/movie — characters, actors, plot, context. If unsure, say so briefly instead of inventing.
+- Never be partisan or offensive.
+"""
+
 
 class LLMFallbackEngine:
     def __init__(self) -> None:
@@ -59,41 +80,74 @@ class LLMFallbackEngine:
         self._bedrock_available: bool | None = None
 
     async def generate_answer(
-        self, question: str, scene: SceneData, timeout: float = 3.5
+        self,
+        question: str,
+        scene: SceneData,
+        timeout: float = 6.0,
+        context_title: Optional[str] = None,
     ) -> AnswerPayload:
         start_time = time.perf_counter()
 
         # 1. Try AWS Bedrock first (preferred for the AWS Builder mini-challenge)
         try:
-            result = await self._call_bedrock(question, scene, timeout)
+            result = await self._call_bedrock(
+                question, scene, timeout, context_title=context_title
+            )
             if result:
                 latency = (time.perf_counter() - start_time) * 1000.0
-                return self._build_payload(result, question, scene, latency, "llm_bedrock")
+                return self._build_payload(
+                    result,
+                    question,
+                    scene,
+                    latency,
+                    "llm_bedrock",
+                    context_title=context_title,
+                )
         except Exception as e:
             logger.info(f"Bedrock unavailable, continuing fallback chain: {e}")
 
         # 2. Try OpenAI if API key configured
         if self.openai_key:
             try:
-                result = await self._call_openai(question, scene, timeout)
+                result = await self._call_openai(
+                    question, scene, timeout, context_title=context_title
+                )
                 if result:
                     latency = (time.perf_counter() - start_time) * 1000.0
-                    return self._build_payload(result, question, scene, latency, "llm_openai")
+                    return self._build_payload(
+                        result,
+                        question,
+                        scene,
+                        latency,
+                        "llm_openai",
+                        context_title=context_title,
+                    )
             except Exception as e:
                 logger.warning(f"OpenAI fallback query failed: {e}")
 
-        # 2. Try Ollama (llama3.2:3b default)
+        # 3. Try Ollama (llama3.2:3b default)
         try:
-            result = await self._call_ollama(question, scene, timeout)
+            result = await self._call_ollama(
+                question, scene, timeout, context_title=context_title
+            )
             if result:
                 latency = (time.perf_counter() - start_time) * 1000.0
-                return self._build_payload(result, question, scene, latency, "llm_ollama")
+                return self._build_payload(
+                    result,
+                    question,
+                    scene,
+                    latency,
+                    "llm_ollama",
+                    context_title=context_title,
+                )
         except Exception as e:
             logger.info(f"Ollama local service unavailable or timed out: {e}")
 
-        # 3. Graceful heuristic contextual synthesis (guaranteed zero crash fallback)
+        # 4. Graceful heuristic contextual synthesis (guaranteed zero crash fallback)
         latency = (time.perf_counter() - start_time) * 1000.0
-        return self._contextual_synthesis(question, scene, latency)
+        return self._contextual_synthesis(
+            question, scene, latency, context_title=context_title
+        )
 
     def _bedrock_client(self):
         """Lazy boto3 client; None if boto3/credentials unavailable (cached)."""
@@ -111,7 +165,11 @@ class LLMFallbackEngine:
             return None
 
     async def _call_bedrock(
-        self, question: str, scene: SceneData, timeout: float = 3.5
+        self,
+        question: str,
+        scene: SceneData,
+        timeout: float = 6.0,
+        context_title: Optional[str] = None,
     ) -> dict | None:
         import asyncio
         import json as _json
@@ -119,10 +177,18 @@ class LLMFallbackEngine:
         client = self._bedrock_client()
         if not client:
             return None
-        system = SYSTEM_PROMPT_TEMPLATE.format(
-            channel=scene.channel, title=scene.title, category=scene.category,
-            timestamp=scene.timestamp, context_summary=scene.context_summary,
-        )
+        if context_title:
+            system = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
+                title=context_title, question=question
+            )
+        else:
+            system = SYSTEM_PROMPT_TEMPLATE.format(
+                channel=scene.channel,
+                title=scene.title,
+                category=scene.category,
+                timestamp=scene.timestamp,
+                context_summary=scene.context_summary,
+            )
         body = _json.dumps({
             "messages": [{"role": "user", "content": [{"text": system + "\n\nQuestion: " + question}]}],
             "inferenceConfig": {"maxTokens": 600, "temperature": 0.3},
@@ -140,16 +206,25 @@ class LLMFallbackEngine:
         return _json.loads(text[start:end])
 
     async def _call_ollama(
-        self, question: str, scene: SceneData, timeout: float
+        self,
+        question: str,
+        scene: SceneData,
+        timeout: float,
+        context_title: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.ollama_host}/api/generate"
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
-            channel=scene.channel,
-            title=scene.title,
-            category=scene.category,
-            timestamp=scene.timestamp,
-            context_summary=scene.context_summary,
-        )
+        if context_title:
+            system_prompt = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
+                title=context_title, question=question
+            )
+        else:
+            system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+                channel=scene.channel,
+                title=scene.title,
+                category=scene.category,
+                timestamp=scene.timestamp,
+                context_summary=scene.context_summary,
+            )
         payload = {
             "model": self.ollama_model,
             "prompt": f"{system_prompt}\n\nUSER QUESTION: {question}\n\nJSON RESPONSE:",
@@ -167,16 +242,25 @@ class LLMFallbackEngine:
         return None
 
     async def _call_openai(
-        self, question: str, scene: SceneData, timeout: float
+        self,
+        question: str,
+        scene: SceneData,
+        timeout: float,
+        context_title: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.openai_base_url}/chat/completions"
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
-            channel=scene.channel,
-            title=scene.title,
-            category=scene.category,
-            timestamp=scene.timestamp,
-            context_summary=scene.context_summary,
-        )
+        if context_title:
+            system_prompt = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
+                title=context_title, question=question
+            )
+        else:
+            system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+                channel=scene.channel,
+                title=scene.title,
+                category=scene.category,
+                timestamp=scene.timestamp,
+                context_summary=scene.context_summary,
+            )
         headers = {
             "Authorization": f"Bearer {self.openai_key}",
             "Content-Type": "application/json",
@@ -220,9 +304,11 @@ class LLMFallbackEngine:
         scene: SceneData,
         latency_ms: float,
         engine_id: str,
+        context_title: Optional[str] = None,
     ) -> AnswerPayload:
-        title = data.get("title") or f"Spotlight Analysis: {scene.category}"
-        subtitle = data.get("subtitle") or "AI CURATED RESPONSE"
+        display_title = context_title or scene.title
+        title = data.get("title") or (f"Spotlight: {display_title}" if context_title else f"Spotlight Analysis: {scene.category}")
+        subtitle = data.get("subtitle") or ("TITLE INTEL" if context_title else "AI CURATED RESPONSE")
         badge = data.get("verdict_badge") or "ANALYZED"
         color = data.get("verdict_color", "sky")
         if color not in ["sky", "emerald", "amber", "rose", "purple"]:
@@ -238,22 +324,57 @@ class LLMFallbackEngine:
             verdict_color=color,
             primary_explanation=data.get(
                 "primary_explanation",
-                f"Curiosity analysis resolved for '{question}' during {scene.title}.",
+                f"Curiosity analysis resolved for '{question}' during {display_title}.",
             ),
-            key_details=data.get("key_details", [scene.context_summary]),
+            key_details=data.get("key_details", [f"Context: {display_title}"]),
             sources=data.get(
                 "sources",
-                [f"Broadcaster Feed: {scene.channel}", "Spotlight Knowledge Engine"],
+                [f"Verified Reference: {display_title}", "Spotlight Knowledge Engine"],
             ),
-            companion_note=f"Learning Companion: Free-form question about {scene.category.lower()} added to your log.",
+            companion_note=(
+                f"Learning Companion: Inquiry about {display_title} added to your log."
+                if context_title
+                else f"Learning Companion: Free-form question about {scene.category.lower()} added to your log."
+            ),
             latency_ms=round(latency_ms, 1),
             is_canonical=False,
         )
 
     def _contextual_synthesis(
-        self, question: str, scene: SceneData, latency_ms: float
+        self,
+        question: str,
+        scene: SceneData,
+        latency_ms: float,
+        context_title: Optional[str] = None,
     ) -> AnswerPayload:
         """Deterministic context-aware answer for any arbitrary question when LLM server is offline."""
+        if context_title:
+            return AnswerPayload(
+                engine_id="contextual_synthesis",
+                beat_id=scene.beat_id,
+                question=question,
+                title=f"Scene Intel: {context_title}",
+                subtitle="TITLE-AWARE CONTEXT",
+                verdict_badge="VIEWER CONTEXT",
+                verdict_color="sky",
+                primary_explanation=(
+                    f"Regarding '{question}' in '{context_title}': "
+                    f"Curiosity inquiry logged for {context_title}. "
+                    "Offline fallback synthesis active."
+                ),
+                key_details=[
+                    f"Program: {context_title}",
+                    f"Question: {question}",
+                    "Spotlight Knowledge Synthesis",
+                ],
+                sources=[
+                    f"{context_title} Continuity Guide",
+                    "Spotlight Knowledge Engine",
+                ],
+                companion_note=f"Learning Companion: Title inquiry for '{context_title}' recorded in your profile.",
+                latency_ms=round(latency_ms, 1),
+                is_canonical=False,
+            )
         beat = scene.beat_id
         if beat == BeatId.KIDS:
             return AnswerPayload(

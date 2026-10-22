@@ -74,13 +74,18 @@ class StateManager:
         self.state.status = TVStatus.PLAYING
         self.state.is_frozen = False
         self.state.current_overlay = None
+        self.state.context_title = None
         await self.broadcast_state("BEAT_CHANGE")
 
-    async def trigger_freeze_and_analyze(self, timestamp: Optional[str] = None) -> None:
+    async def trigger_freeze_and_analyze(
+        self, timestamp: Optional[str] = None, context_title: Optional[str] = None
+    ) -> None:
         self.state.is_frozen = True
         self.state.status = TVStatus.ANALYZING
         if timestamp:
             self.state.timestamp = timestamp
+        if context_title is not None:
+            self.state.context_title = context_title
         await self.broadcast_state("FREEZE")
 
     async def apply_answer(self, answer: AnswerPayload) -> None:
@@ -102,6 +107,7 @@ class StateManager:
         self.state.current_overlay = None
         self.state.timestamp = config.SCENES[BeatId.KIDS].timestamp
         self.state.demo_mode = False
+        self.state.context_title = None
         await self.broadcast_state("RESET")
 
 

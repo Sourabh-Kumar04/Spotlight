@@ -179,7 +179,9 @@ async def handle_ask(req: AskRequest):
     timestamp = req.timestamp or scene.timestamp
 
     # 1. TV enters analyzing state
-    await state_manager.trigger_freeze_and_analyze(timestamp)
+    await state_manager.trigger_freeze_and_analyze(
+        timestamp, context_title=req.context_title
+    )
 
     # Small delay for realistic Fire TV analysis perception if demo mode
     # (keeps canonical feel instant yet observable)
@@ -192,6 +194,7 @@ async def handle_ask(req: AskRequest):
         question=req.question,
         custom_scene=scene,
         lang=getattr(req, "lang", "en") or "en",
+        context_title=req.context_title,
     )
 
     # 3. Log to session history
@@ -203,6 +206,7 @@ async def handle_ask(req: AskRequest):
         is_canonical=answer.is_canonical,
         latency_ms=answer.latency_ms,
         custom_note=answer.companion_note or None,
+        context_title=req.context_title,
     )
     answer.companion_note = session_item.companion_note
 

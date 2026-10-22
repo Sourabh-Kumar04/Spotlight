@@ -233,3 +233,64 @@ def test_websocket_connection_and_actions():
         beat_event = ws.receive_json()
         assert beat_event["type"] == "BEAT_CHANGE"
         assert beat_event["state"]["current_beat"] == "sports"
+
+
+def test_api_ask_context_title_canonical_precedence():
+    """Canonical engine answers must retain absolute precedence over LLM fallback."""
+    res = client.post(
+        "/api/ask",
+        json={
+            "beat_id": "movie",
+            "question": "who is that man?",
+            "context_title": "Charade",
+            "source": "remote",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "answered"
+    assert data["answer"]["is_canonical"] is True
+    assert data["answer"]["title"] == "Cary Grant"
+    assert data["answer"]["verdict_badge"] == "CAST SPOTLIGHT"
+    assert "Cary Grant" in data["answer"]["primary_explanation"]
+    assert data["state"]["context_title"] == "Charade"
+
+
+def test_api_ask_context_title_breaking_bad():
+    """Title-aware ask for Breaking Bad routes to LLM fallback and identifies Walter White / Bryan Cranston."""
+    res = client.post(
+        "/api/ask",
+        json={
+            "beat_id": "movie",
+            "question": "who is the main character?",
+            "context_title": "Breaking Bad",
+            "source": "remote",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "answered"
+    assert data["answer"]["is_canonical"] is False
+    content = (data["answer"]["title"] + " " + data["answer"]["primary_explanation"]).lower()
+    assert "walter" in content or "cranston" in content or "white" in content
+    assert data["session_item"]["context_title"] == "Breaking Bad"
+
+
+def test_api_ask_context_title_severance_pilot():
+    """Harder probe: Severance pilot director must identify Ben Stiller."""
+    res = client.post(
+        "/api/ask",
+        json={
+            "question": "who directed the pilot?",
+            "context_title": "Severance",
+            "source": "remote",
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "answered"
+    assert data["answer"]["is_canonical"] is False
+    content = (data["answer"]["title"] + " " + data["answer"]["primary_explanation"]).lower()
+    assert "ben stiller" in content or "stiller" in content
+    assert data["state"]["context_title"] == "Severance"
+

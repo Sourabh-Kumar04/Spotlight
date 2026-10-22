@@ -7,6 +7,7 @@
   const container = document.getElementById("tvApp");
   const timecodeEl = document.getElementById("hudTimecode");
   const titleEl = document.getElementById("hudTitle");
+  const contextTitleEl = document.getElementById("hudContextTitle");
   const channelEl = document.getElementById("hudChannel");
   const sceneLabelEl = document.getElementById("sceneLabel");
 
@@ -179,6 +180,15 @@
 
     if (scene) {
       if (titleEl) titleEl.textContent = scene.title;
+      if (contextTitleEl) {
+        if (state && state.context_title) {
+          contextTitleEl.textContent = `— ${state.context_title}`;
+          contextTitleEl.style.display = "inline";
+        } else {
+          contextTitleEl.textContent = "";
+          contextTitleEl.style.display = "none";
+        }
+      }
       if (channelEl) channelEl.textContent = scene.subtitle || scene.channel;
       if (sceneLabelEl) sceneLabelEl.textContent = `${scene.category.toUpperCase()} // ${scene.timestamp}`;
     }

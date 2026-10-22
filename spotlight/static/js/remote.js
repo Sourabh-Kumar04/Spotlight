@@ -6,6 +6,7 @@
 (function () {
   const askBtn = document.getElementById("askBtn");
   const questionInput = document.getElementById("questionInput");
+  const nowWatchingInput = document.getElementById("nowWatchingInput");
   const targetTitle = document.getElementById("targetTitle");
   const targetStatus = document.getElementById("targetStatus");
   const targetChannel = document.getElementById("targetChannel");
@@ -126,6 +127,7 @@
     if (isAsking) return;
 
     const question = questionInput.value.trim() || defaultQuestions[currentBeat];
+    const contextTitle = nowWatchingInput ? nowWatchingInput.value.trim() : "";
     setAskButtonState(true);
 
     try {
@@ -135,6 +137,7 @@
         body: JSON.stringify({
           beat_id: currentBeat,
           question: question,
+          context_title: contextTitle || null,
           source: "remote",
         }),
       });
@@ -196,6 +199,7 @@
   if (resetBtn) {
     resetBtn.addEventListener("click", async () => {
       try {
+        if (nowWatchingInput) nowWatchingInput.value = "";
         await fetch("/api/reset", { method: "POST" });
         await loadHistory();
       } catch (err) {
@@ -289,6 +293,9 @@
       if (typeof url === "string" && url.includes("/api/ask") && opts && opts.body) {
         const body = JSON.parse(opts.body);
         if (!body.lang) body.lang = window.__spotlightLang || "en";
+        if (body.context_title === undefined && nowWatchingInput && nowWatchingInput.value.trim()) {
+          body.context_title = nowWatchingInput.value.trim();
+        }
         opts.body = JSON.stringify(body);
       }
     } catch (e) { /* leave untouched */ }

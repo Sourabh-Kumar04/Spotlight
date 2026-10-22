@@ -37,6 +37,7 @@ class KnowledgeRouter:
         custom_scene: SceneData | None = None,
         force_llm: bool = False,
         lang: str = "en",
+        context_title: str | None = None,
     ) -> AnswerPayload:
         """Resolves a question using canonical curated engines or LLM fallback."""
         start_time = time.perf_counter()
@@ -53,7 +54,9 @@ class KnowledgeRouter:
             return answer
 
         # Otherwise route to LLM fallback
-        answer = await llm_fallback_engine.generate_answer(clean_question, scene)
+        answer = await llm_fallback_engine.generate_answer(
+            clean_question, scene, context_title=context_title
+        )
         return answer
 
     async def resolve_localized(
@@ -63,9 +66,12 @@ class KnowledgeRouter:
         custom_scene: SceneData | None = None,
         force_llm: bool = False,
         lang: str = "en",
+        context_title: str | None = None,
     ) -> AnswerPayload:
         """Resolve then translate canonical answers to the requested language."""
-        answer = await self.resolve(beat_id, question, custom_scene, force_llm)
+        answer = await self.resolve(
+            beat_id, question, custom_scene, force_llm, lang, context_title=context_title
+        )
         return translate_answer(answer, lang)
 
 

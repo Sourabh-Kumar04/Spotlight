@@ -45,6 +45,7 @@ class AskRequest(BaseModel):
     timestamp: Optional[str] = None
     source: str = "remote"
     lang: str = "en"  # en | es | hi
+    context_title: Optional[str] = None
 
 
 class AnswerPayload(BaseModel):
@@ -73,6 +74,7 @@ class TVState(BaseModel):
     current_overlay: Optional[AnswerPayload] = None
     timestamp: str = "00:00"
     demo_mode: bool = False
+    context_title: Optional[str] = None
 
 
 class SessionHistoryItem(BaseModel):
@@ -87,3 +89,4 @@ class SessionHistoryItem(BaseModel):
     is_canonical: bool
     latency_ms: float
     companion_note: str
+    context_title: Optional[str] = None
