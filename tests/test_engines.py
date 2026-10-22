@@ -35,15 +35,17 @@ def test_movie_engine_canonical_matching():
 
     assert engine.can_handle_canonical("Who is that guy and why is everyone mad at him?") is True
     assert engine.can_handle_canonical("who is that guy") is True
+    assert engine.can_handle_canonical("who is that man") is True
     assert engine.can_handle_canonical("catch up") is True
     assert engine.can_handle_canonical("What is the recipe for pasta?") is False
 
-    ans = engine.get_canonical_answer("Who is that guy and why is everyone mad at him?", scene)
+    ans = engine.get_canonical_answer("who is that man?", scene)
     assert ans.is_canonical is True
-    assert ans.verdict_badge == "ROGUE ASSET ALERT"
-    assert "Director Vance" in ans.primary_explanation
-    assert "cipher" in ans.primary_explanation.lower()
-    assert "Character: Director Vance" in ans.key_details[0]
+    assert ans.title == "Cary Grant"
+    assert ans.verdict_badge == "CAST SPOTLIGHT"
+    assert "Cary Grant" in ans.primary_explanation
+    assert "Peter Joshua" in ans.primary_explanation
+    assert "Charade" in ans.key_details[0]
     assert len(ans.sources) >= 2
 
 

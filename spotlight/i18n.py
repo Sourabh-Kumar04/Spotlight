@@ -47,36 +47,38 @@ TRANSLATIONS = {
     },
     BeatId.MOVIE: {
         "es": {
-            "title": "Tarjeta de actualización: Director Vance",
-            "subtitle": "INTELIGENCIA DE PERSONAJES Y CONTEXTO",
-            "verdict_badge": "ALERTA DE AGENTE REBELDE",
+            "title": "Cary Grant",
+            "subtitle": "CHARADA (1963) — PETER JOSHUA",
+            "verdict_badge": "PRIMER PLANO DEL ELENCO",
             "primary_explanation": (
-                "Ese es el Director Vance, exjefe de la unidad encubierta de Operaciones "
-                "Cibernéticas. Hace diez minutos, en los muelles, traicionó a su propio equipo "
-                "y robó la llave maestra biométrica. La sala está furiosa porque las puertas "
-                "acaban de iniciar un bloqueo total: sin el cifrado de Vance, todos quedarán "
-                "atrapados en menos de 15 minutos."
+                "Ese es el legendario galán de Hollywood Cary Grant interpretando a Peter Joshua "
+                "en el clásico de intriga 'Charada' (1963). En la película, interpreta a un encantador "
+                "desconocido que ayuda a Regina Lampert (Audrey Hepburn) en París tras el asesinato de su "
+                "esposo, cambiando continuamente de alias —Peter Joshua, Alexander Dyle, Adam Canfield y "
+                "Carson Dyle— antes de revelarse finalmente como el agente del Tesoro Brian Cruikshank."
             ),
             "key_details": [
-                "Personaje: Director Vance (exjefe convertido en corredor del mercado negro).",
-                "Contexto: dio coordenadas falsas a la agente Rossi a las 01:02:18.",
-                "Apuesta inmediata: sin la llave física, la central se autopurga a las 01:30:00.",
+                "Película y Director: Charada (1963), dirigida por Stanley Donen.",
+                "Protagonista: Cary Grant como el misterioso hombre que asiste a Reggie (Audrey Hepburn).",
+                "Giro de identidades: Peter Joshua, Alexander Dyle, Adam Canfield y finalmente Brian Cruikshank.",
+                "Dominio público: Pasó al dominio público de inmediato por la omisión del aviso de copyright.",
             ],
         },
         "hi": {
-            "title": "कैच-अप कार्ड: निदेशक वेंस",
-            "subtitle": "पात्र जानकारी और समयरेखा संदर्भ",
-            "verdict_badge": "दगाबाज़ एजेंट अलर्ट",
+            "title": "कैरी ग्रांट",
+            "subtitle": "शराड (1963) — पीटर जोशुआ",
+            "verdict_badge": "कास्ट स्पॉटलाइट",
             "primary_explanation": (
-                "यह निदेशक वेंस हैं, गुप्त साइबर ऑपरेशंस इकाई के पूर्व प्रमुख। दस मिनट पहले "
-                "बंदरगाह पर उन्होंने अपनी ही टीम को धोखा दिया और बायोमेट्रिक मास्टर साइफर चुरा "
-                "लिया। कमरा गुस्से में है क्योंकि दरवाज़ों ने अभी हार्ड लॉकआउट शुरू कर दिया है — "
-                "वेंस के साइफर के बिना 15 मिनट में सभी अंदर फँस जाएँगे।"
+                "यह हॉलीवुड के दिग्गज अभिनेता कैरी ग्रांट हैं, जो 1963 की क्लासिक मिस्ट्री थ्रिलर 'शराड' में "
+                "पीटर जोशुआ की भूमिका निभा रहे हैं। फिल्म में, वह पेरिस में रेजिना लैम्बर्ट (ऑड्रे हेपबर्न) की "
+                "मदद करने वाले एक आकर्षक अजनबी का किरदार निभाते हैं, जो लगातार अपनी पहचान बदलते हैं (पीटर जोशुआ, "
+                "अलेक्जेंडर डाइल, एडम कैनफील्ड, कार्सन डाइल) और अंततः अमेरिकी ट्रेजरी एजेंट ब्रायन क्रुइकशैंक साबित होते हैं।"
             ),
             "key_details": [
-                "पात्र: निदेशक वेंस (पूर्व डिवीजन प्रमुख, अब काला-बाज़ार दलाल)।",
-                "संदर्भ: 01:02:18 पर एजेंट रॉसी को झूठे निर्देशांक दिए।",
-                "तत्काल दांव: भौतिक कुंजी के बिना 01:30:00 पर बेस मेनफ्रेम स्वयं मिट जाएगा।",
+                "फिल्म और निर्देशक: शराड (1963), स्टेनली डोनेन द्वारा निर्देशित।",
+                "मुख्य अभिनेता: कैरी ग्रांट, ऑड्रे हेपबर्न की मदद करने वाले रहस्यमयी अजनबी के रूप में।",
+                "पहचान का मोड़: पीटर जोशुआ, अलेक्जेंडर डाइल, एडम कैनफील्ड और अंततः ब्रायन क्रुइकशैंक।",
+                "पब्लिक डोमेन: कॉपीराइट नोटिस छूट जाने के कारण यह फिल्म रिलीज़ होते ही पब्लिक डोमेन में आ गई थी।",
             ],
         },
     },

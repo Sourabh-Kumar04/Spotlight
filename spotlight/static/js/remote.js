@@ -25,7 +25,7 @@
   // Beat default questions map
   const defaultQuestions = {
     kids: "Why is the sky blue?",
-    movie: "Who is that guy and why is everyone mad at him?",
+    movie: "who is that man?",
     sports: "Why was that a foul?",
     news: "Is that claim true?",
     cooking: "What spice did they just add?",

@@ -35,6 +35,7 @@ class SceneData(BaseModel):
     context_summary: str
     default_question: str
     visual_theme: str
+    subtitle: Optional[str] = None
 
 
 class AskRequest(BaseModel):

@@ -84,8 +84,8 @@ class SessionManager:
             count = self.topic_counts["sky"]
             return "Learning Companion: Science question logged to Family Curiosity Journal. Great follow-up for bedtime reading."
 
-        if beat_id == BeatId.MOVIE or "guy" in q_lower:
-            return "Learning Companion: Character saved to your Living Cast card. We'll alert you if Vance appears in the climax."
+        if beat_id == BeatId.MOVIE or "guy" in q_lower or "man" in q_lower:
+            return "Learning Companion: Character saved to your Living Cast card. We'll alert you if Cary Grant's character changes identities again."
 
         if beat_id == BeatId.NEWS or "true" in q_lower:
             return "Learning Companion: Fact-check verified and pinned with primary citations in your Trust Feed."
@@ -109,9 +109,9 @@ class SessionManager:
         },
         "characters": {
             "title": "60-Second Explainer: Following the Story",
-            "body": "Director Vance ran the covert Cyber Operations unit until he stole the biometric master "
-                    "cipher at the docks. Every scene since has been the team racing his 15-minute lockout. "
-                    "Watch for the cipher key — whoever holds it controls the facility.",
+            "body": "Cary Grant stars as Peter Joshua, a charming stranger aiding Audrey Hepburn's Reggie Lampert "
+                    "in Paris after her husband is murdered. Throughout the film he continually changes his alias "
+                    "(Alexander Dyle, Adam Canfield, Carson Dyle) before being revealed as Treasury agent Brian Cruikshank.",
         },
         "fact_checks": {
             "title": "60-Second Explainer: How Fact-Checks Work",

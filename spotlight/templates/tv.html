@@ -16,7 +16,7 @@
         <span class="brand-dot"></span>
         <div>
           <div id="hudTitle" class="channel-title">{{ scene.title }}</div>
-          <div id="hudChannel" class="channel-subtitle">{{ scene.channel }}</div>
+          <div id="hudChannel" class="channel-subtitle">{{ scene.subtitle or scene.channel }}</div>
         </div>
       </div>
       <div class="timecode-block">
@@ -44,16 +44,12 @@
         </svg>
       </section>
 
-      <!-- Beat 2: Movie Thriller -->
+      <!-- Beat 2: Movie Thriller (Charade 1963) -->
       <section id="sceneMovie" class="scene-movie" style="{% if state.current_beat.value != 'movie' %}display:none;{% endif %} width:100%; height:100%;">
+        <video id="movieVideo" class="movie-backdrop-video" autoplay muted loop playsinline src="https://upload.wikimedia.org/wikipedia/commons/d/dc/Charade_%281963%29.webm">
+          <source src="https://upload.wikimedia.org/wikipedia/commons/d/dc/Charade_%281963%29.webm" type="video/webm">
+        </video>
         <div class="movie-aspect-bars"></div>
-        <div class="cinema-room">
-          <div class="cinema-dossier-grid">
-            <span style="font-family:var(--font-mono); font-size:0.75rem; color:#f59e0b; letter-spacing:0.1em;">TACTICAL GRID // FACILITY LOCKDOWN</span>
-            <span style="font-family:var(--font-mono); font-size:0.75rem; color:#94a3b8;">CIPHER KEY PURGE: 14:58</span>
-          </div>
-          <div class="cinema-crosshair"></div>
-        </div>
         <div class="movie-aspect-bars-bottom"></div>
       </section>
 

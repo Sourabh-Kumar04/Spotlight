@@ -25,6 +25,7 @@
   const sceneMovie = document.getElementById("sceneMovie");
   const sceneSports = document.getElementById("sceneSports");
   const sceneNews = document.getElementById("sceneNews");
+  const movieVideo = document.getElementById("movieVideo");
 
   const scenesMap = {
     kids: sceneKids,
@@ -168,9 +169,17 @@
       }
     });
 
+    if (movieVideo) {
+      if (state.current_beat === "movie" && !state.is_frozen) {
+        movieVideo.play().catch(() => {});
+      } else {
+        movieVideo.pause();
+      }
+    }
+
     if (scene) {
       if (titleEl) titleEl.textContent = scene.title;
-      if (channelEl) channelEl.textContent = scene.channel;
+      if (channelEl) channelEl.textContent = scene.subtitle || scene.channel;
       if (sceneLabelEl) sceneLabelEl.textContent = `${scene.category.toUpperCase()} // ${scene.timestamp}`;
     }
 
@@ -190,6 +199,14 @@
     container.classList.toggle("is-frozen", Boolean(isFrozen));
     container.classList.toggle("is-analyzing", status === "analyzing");
     container.classList.toggle("is-answered", status === "answered");
+
+    if (movieVideo && currentState.current_beat === "movie") {
+      if (isFrozen) {
+        movieVideo.pause();
+      } else {
+        movieVideo.play().catch(() => {});
+      }
+    }
   }
 
   function renderOverlay(answer) {

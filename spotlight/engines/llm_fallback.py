@@ -287,19 +287,19 @@ class LLMFallbackEngine:
                 engine_id="contextual_synthesis",
                 beat_id=beat,
                 question=question,
-                title=f"Scene Intel: {scene.title}",
+                title="Cary Grant",
                 subtitle="NARRATIVE & CHARACTER INTEL",
-                verdict_badge="STORYLINE CONTEXT",
-                verdict_color="amber",
+                verdict_badge="CAST SPOTLIGHT",
+                verdict_color="sky",
                 primary_explanation=(
-                    f"At timestamp {scene.timestamp}, the high-stakes confrontation revolves around Director Vance's betrayal. "
-                    "The surrounding characters are reacting to the imminent facility lockout and stolen cipher key, "
-                    "forcing the protagonist into an emergency extraction protocol."
+                    f"At timestamp {scene.timestamp} in '{scene.title}', the unfolding mystery centers on Cary Grant's character, Peter Joshua. "
+                    "Regina Lampert (Audrey Hepburn) is attempting to uncover what happened to her murdered husband's stolen fortune, "
+                    "unaware that Peter Joshua operates under multiple false identities throughout Paris."
                 ),
                 key_details=[
-                    "Narrative Thread: Operation Cipher Recovery (Act II)",
-                    "Dossier Key: Primary antagonist Vance broke chain of command at harbor docks",
-                    "Impending Clock: 15-minute facility purge initiated",
+                    f"Narrative Thread: {scene.title} (1963, Dir. Stanley Donen)",
+                    "Dossier Key: Mystery man introduced as Peter Joshua; multiple aliases uncovered",
+                    "Impending Clock: Hunt for the missing $250,000 WWII fortune before ruthless accomplices strike",
                 ],
                 sources=[
                     f"{scene.title} Official Script Continuity Dossier",

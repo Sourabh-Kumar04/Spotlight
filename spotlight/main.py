@@ -54,6 +54,7 @@ async def get_index(request: Request):
 
 
 @app.get("/tv", response_class=HTMLResponse)
+@app.head("/tv", response_class=HTMLResponse)
 async def get_tv_page(request: Request, demo: int = Query(0)):
     """Full-screen Fire TV app."""
     is_demo = demo == 1
@@ -262,9 +263,9 @@ DEMO_SCRIPT = [
         "beat_index": 1,
         "beat_id": BeatId.MOVIE.value,
         "scene_title": config.SCENES[BeatId.MOVIE].title,
-        "question": "Who is that guy and why is everyone mad at him?",
-        "expected_verdict": "ROGUE ASSET ALERT",
-        "description": "Beat 2: Movie catch-up card — character identity, past betrayal, stakes.",
+        "question": "who is that man?",
+        "expected_verdict": "CAST SPOTLIGHT",
+        "description": "Beat 2: Movie catch-up card — Cary Grant as Peter Joshua in Charade (1963).",
     },
     {
         "beat_index": 2,

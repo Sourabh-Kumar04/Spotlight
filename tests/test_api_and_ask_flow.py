@@ -106,7 +106,7 @@ def test_api_ask_flow_canonical_beat2_movie():
         "/api/ask",
         json={
             "beat_id": "movie",
-            "question": "Who is that guy and why is everyone mad at him?",
+            "question": "who is that man?",
             "source": "remote",
         },
     )
@@ -114,8 +114,8 @@ def test_api_ask_flow_canonical_beat2_movie():
     data = res.json()
     assert data["status"] == "answered"
     assert data["answer"]["is_canonical"] is True
-    assert "Director Vance" in data["answer"]["title"]
-    assert data["answer"]["verdict_badge"] == "ROGUE ASSET ALERT"
+    assert "Cary Grant" in data["answer"]["title"]
+    assert data["answer"]["verdict_badge"] == "CAST SPOTLIGHT"
 
 
 def test_api_ask_flow_canonical_beat3_sports():

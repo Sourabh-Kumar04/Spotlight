@@ -1,7 +1,7 @@
 """Beat 2 Knowledge Engine: Movie Context & Catch-Up Card.
 
-Canonical Question: 'Who is that guy and why is everyone mad at him?'
-Target: Catch-up card (character, context, what's happening) for a generic fictional scene.
+Canonical Question: 'Who is that man?' (or 'Who is that guy and why is everyone mad at him?')
+Target: Catch-up card (character, context, what's happening) for Charade (1963).
 """
 
 from spotlight.engines.base import BaseKnowledgeEngine
@@ -15,12 +15,19 @@ class MovieEngine(BaseKnowledgeEngine):
         "who is that guy",
         "why is everyone mad",
         "who is that",
+        "who is that man",
         "why are they mad",
         "who is vance",
         "why is everyone angry",
         "catch up",
         "what is happening",
         "whats happening",
+        "cary grant",
+        "peter joshua",
+        "charade",
+        "alexander dyle",
+        "adam canfield",
+        "carson dyle",
     ]
 
     def can_handle_canonical(self, question: str) -> bool:
@@ -34,25 +41,27 @@ class MovieEngine(BaseKnowledgeEngine):
             engine_id="movie_catchup",
             beat_id=self.beat_id,
             question=question if question.strip() else scene.default_question,
-            title="Catch-Up Card: Director Vance",
-            subtitle="CHARACTER INTEL & TIMELINE CONTEXT",
-            verdict_badge="ROGUE ASSET ALERT",
-            verdict_color="amber",
+            title="Cary Grant",
+            subtitle="CHARADE (1963) — PETER JOSHUA",
+            verdict_badge="CAST SPOTLIGHT",
+            verdict_color="sky",
             primary_explanation=(
-                "That is Director Vance, former head of the covert Cyber Operations unit. "
-                "Ten minutes ago at the docks, he double-crossed his own strike team and stole the biometric master cipher key. "
-                "The room is furious because the facility doors just initiated a hard lockout — without Vance's cipher, everyone inside is trapped in under 15 minutes."
+                "That is Hollywood leading man Cary Grant starring as Peter Joshua in Stanley Donen's 1963 romantic mystery thriller 'Charade'. "
+                "In the film, he portrays a charming stranger who assists Reggie Lampert (Audrey Hepburn) in Paris after her husband is murdered, "
+                "continually shifting through multiple aliases — Peter Joshua, Alexander Dyle, Adam Canfield, and Carson Dyle — "
+                "before ultimately revealing his true identity as U.S. Treasury agent Brian Cruikshank."
             ),
             key_details=[
-                "Character: Director Vance (former Division Chief turned black-market broker).",
-                "Context: Handed false tracking coordinates to Agent Rossi at timestamp 01:02:18.",
-                "Immediate Stake: If the team cannot recover the physical key, the base mainframe self-purges at 01:30:00.",
+                "Film & Director: Charade, directed by Stanley Donen, released in 1963 by Universal Pictures.",
+                "Actor & Character: Cary Grant as Peter Joshua, the charming mystery man assisting Audrey Hepburn's Reggie Lampert.",
+                "The Alias Twist: Switches identities from Peter Joshua to Alexander Dyle, Adam Canfield, and Carson Dyle; secretly Treasury agent Brian Cruikshank.",
+                "Public Domain Note: Entered the public domain immediately upon release in 1963 because Universal omitted the required copyright notice.",
             ],
             sources=[
-                "Scene Intelligence: The Syndicate Protocol (Act II Scene 4)",
-                "Living Cast Metadata: Biometric Registry Dossier #882",
+                "Film Registry: Charade (Universal Pictures, 1963) — Directed by Stanley Donen",
+                "Living Cast Dossier: Cary Grant (as Peter Joshua / Alexander Dyle / Brian Cruikshank)",
             ],
-            companion_note="Learning Companion: Character saved to your Living Cast card. We'll alert you if Vance appears in the climax.",
+            companion_note="Learning Companion: Character saved to your Living Cast card. We'll alert you whenever Cary Grant's character changes identities.",
             latency_ms=14.0,
             is_canonical=True,
         )
