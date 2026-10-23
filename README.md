@@ -83,12 +83,27 @@ uv pip install -e ".[dev]"
 # Or: pip install fastapi "uvicorn[standard]" httpx jinja2 websockets pytest pytest-asyncio
 ```
 
-### 2. Start the Server
+### 2. (Optional) Configure
+```bash
+cp .env.example .env
+```
+Every setting is optional — see `.env.example` for the full list. What works with **zero keys**:
+- the full 4-beat demo tour, all 8 knowledge engines, TV self-awareness, pairing, voice commands, and the answer cache.
+- free-form questions fall back to the built-in contextual synthesis engine.
+
+Add keys to unlock more:
+- **Ollama** (`ollama pull llama3.2:3b`) — local LLM answers for anything unscripted.
+- **Bedrock / OpenAI** — cloud LLM providers (Bedrock first in the chain).
+- **faster-whisper** (`pip install faster-whisper`) — real speech-to-text on push-to-talk; otherwise type your question.
+- **Piper TTS** — server-side voice replies; otherwise the browser speaks.
+- **Google Fact Check API key** — live verification on the news beat; otherwise curated verdicts.
+
+### 3. Start the Server
 ```bash
 python3 -m uvicorn spotlight.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3. Open the Experience
+### 4. Open the Experience
 - **Evaluating side-by-side?** Open [`http://localhost:8000/demo`](http://localhost:8000/demo) to see the TV and Phone Remote operating in real time together.
 - **Testing multi-device?** Open `/tv` on your TV / monitor and `/remote` on your smartphone (connected to the same local network).
 
