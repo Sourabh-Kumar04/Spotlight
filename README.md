@@ -40,7 +40,7 @@ You don't want to type a query into a sluggish TV keyboard or open a mobile brow
 | 7 | Shopping | What shoes is he wearing? | Real product identification (e.g. Forrest Gump's Nike Cortez) |
 | 8 | Language | What did they just say? | ES→EN translation + context |
 
-Plus: **voice Q&A** (push-to-talk on phone → faster-whisper STT → Piper TTS voice reply on phone + speechSynthesis spoken answer on TV), **voice commands** (pause/play/rewind/volume via intent router + WebSocket hub), **TV self-awareness** (/tv pushes title + frame every 5s to /api/tv/context, auto-attached to /api/ask when no explicit context given), **3 languages** (EN/ES/HI for the 4 demo-tour beats; remaining 4 beats fall back to English), **frame analysis** (`POST /api/analyze-frame`), **learning companion** (60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama → curated** LLM fallback chain.
+Plus: **voice Q&A** (push-to-talk on phone → faster-whisper STT → Piper TTS voice reply on phone + speechSynthesis spoken answer on TV), **voice commands** (pause/play/rewind/volume via intent router + WebSocket hub), **TV self-awareness** (/tv pushes title + frame every 5s to /api/tv/context, auto-attached to /api/ask when no explicit context given), **3 languages** (EN/ES/HI for the 4 demo-tour beats; remaining 4 beats fall back to English), **frame analysis** (`POST /api/analyze-frame`), **learning companion** (60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama → curated** LLM fallback chain, **play anything** (paste any direct video URL on /tv with `U`, or push-to-tv from the phone — self-awareness picks it up automatically).
 
 ---
 
@@ -127,6 +127,19 @@ When viewing `/tv` in a browser or Fire TV test browser:
 - `3` : Switch to Beat 3 (Soccer Match)
 - `4` : Switch to Beat 4 (News Fact-Check)
 - `Space` / `Enter` : Dismiss overlay / resume video playback
+- `U` : Toggle the custom video URL bar (play any direct mp4/webm link)
+
+---
+
+## Production Hardening
+
+- **Pairing codes.** No more guessable `default` session. Each `/tv` load generates a random code (`SPOT-4821`), shown top-right on the TV; the phone enters it once to pair (remembered in localStorage). `?session=` still overrides for dev.
+- **TV voice state on the phone.** The TV broadcasts `listening / thinking / speaking` over the session hub; `/remote` mirrors it, and shows `RECONNECTING` instead of silence when the socket drops.
+- **Spoiler-aware answers.** When the TV reports a playback timestamp, the LLM prompt is instructed to use only information from up to that point — no plot twists from later in the film.
+- **Answer cache.** `(title, 30s timestamp bucket, question)` → answer, in-memory, 1h TTL. Repeat questions answer instantly (measured: 3.89s → 0.00s on repeat).
+- **Rate limits.** `/api/tv/context`: 1 post / 2s per session; `/api/voice/transcribe`: 20 / min per client IP; frame payloads capped at ~2MB, audio at 10MB. Abuse of the public tunnel can't run up an LLM bill.
+- **Debug health page.** `GET /health` (behind `SPOTLIGHT_DEBUG=1`) returns uptime, per-session last-context, last STT time, last LLM provider, last ask latency, and cache hit/miss counts — the loop is inspectable live.
+- **Privacy.** See [PRIVACY.md](PRIVACY.md): frames live in server memory only, overwritten every ~5s, never written to disk; no open-ended face recognition.
 
 ---
 

@@ -190,6 +190,7 @@ Fire TV interfaces must be readable from across a room (the 10-foot UI guideline
 | `/api/demo/step` | POST | Execute a demo step without network dependency |
 | `/ws` | WS | Bidirectional state sync (TV ↔ remote) |
 | `/ws/session/{session_id}` | WS | Session hub: voice state + device control |
+| `/health` | GET | Debug metrics JSON (behind `SPOTLIGHT_DEBUG=1`): uptime, per-session context, STT/ask timings, LLM provider, cache stats |
 
 ---
 
@@ -209,7 +210,18 @@ Fire TV interfaces must be readable from across a room (the 10-foot UI guideline
 
 ---
 
-## 6. What Is Not Shipped (Honest Gaps)
+## 6. Production Hardening
+
+- **Pairing.** Sessions are random per-load codes (`SPOT-4821`) shown on the TV; the phone pairs once. `?session=` overrides for development.
+- **Rate limiting.** In-memory token buckets: `/api/tv/context` 1 req/2s per session, `/api/voice/transcribe` 20 req/min per IP; payload caps (frame ~2MB, audio 10MB) return 413.
+- **Spoiler-aware prompts.** `current_time` threads from `/api/ask` → router → LLM fallback; when known, the system prompt carries a SPOILER RULE limiting answers to content up to the viewer's timestamp.
+- **Answer cache.** In-memory `(title, 30s bucket, question)` → `AnswerPayload`, 1h TTL, 500-entry cap; hits recorded in metrics.
+- **Voice-state mirroring.** `setVoiceState` on the TV publishes `{kind: "tv_voice_state"}` to the session hub; the phone renders it and shows `RECONNECTING` on socket drop.
+- **Privacy.** Frames are memory-only per session, overwritten ~every 5s, never persisted; see PRIVACY.md.
+
+---
+
+## 7. What Is Not Shipped (Honest Gaps)
 
 These are design directions mentioned in early planning, not implemented in the shipped app:
 
