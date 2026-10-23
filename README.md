@@ -40,7 +40,7 @@ You don't want to type a query into a sluggish TV keyboard or open a mobile brow
 | 7 | Shopping | What shoes is he wearing? | Real product identification (e.g. Forrest Gump's Nike Cortez) |
 | 8 | Language | What did they just say? | ES→EN translation + context |
 
-Plus: **voice Q&A** (push-to-talk → faster-whisper STT → Piper TTS voice reply), **voice commands** (pause/play/rewind/volume), **TV self-awareness** (/tv pushes title + frame every 5s, auto-attached to every question), **3 languages** (EN/ES/HI), **frame analysis** (`POST /api/analyze-frame`), **learning companion** (60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama → curated** LLM fallback chain.
+Plus: **voice Q&A** (push-to-talk on phone → faster-whisper STT → Piper TTS voice reply on phone + speechSynthesis spoken answer on TV), **voice commands** (pause/play/rewind/volume via intent router + WebSocket hub), **TV self-awareness** (/tv pushes title + frame every 5s to /api/tv/context, auto-attached to /api/ask when no explicit context given), **3 languages** (EN/ES/HI for the 4 demo-tour beats; remaining 4 beats fall back to English), **frame analysis** (`POST /api/analyze-frame`), **learning companion** (60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama → curated** LLM fallback chain.
 
 ---
 
@@ -56,9 +56,9 @@ Plus: **voice Q&A** (push-to-talk → faster-whisper STT → Piper TTS voice rep
 
 ---
 
-## The 4 Canonical Demo Beats
+## The 4 Demo-Tour Beats
 
-Spotlight includes 4 specialized knowledge engines designed for real-world TV watching categories:
+Spotlight ships 8 knowledge engines (one per beat in the Feature Map above). The first 4 have canonical answers translated into EN/ES/HI and are the scripted demo tour:
 
 | Beat | Category | Channel & Scene | Canonical Question | Engine Output |
 | :--- | :--- | :--- | :--- | :--- |
@@ -67,7 +67,7 @@ Spotlight includes 4 specialized knowledge engines designed for real-world TV wa
 | **Beat 3** | **Sports (Soccer)** | Soccer match scene | *"Why was that a foul?"* | Replay breakdown + IFAB Law 12 reckless-challenge ruling. |
 | **Beat 4** | **News Fact-Check** | News segment | *"Is that claim true?"* | Non-partisan scientific audit: Apollo 11 moon landing **VERIFIED TRUE** with 2 independent citations. |
 
-> **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms**) via curated rule engines. Free-form questions route seamlessly to the LLM fallback (Ollama `llama3.2:3b` default or OpenAI via environment variables), falling back gracefully to context-aware synthesis if offline.
+> **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms**) via curated rule engines. Free-form questions route to the LLM fallback chain (Bedrock → OpenAI → Ollama `llama3.2:3b` → deterministic contextual synthesis), falling back gracefully to context-aware synthesis when all LLMs are offline.
 
 ---
 
