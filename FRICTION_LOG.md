@@ -62,3 +62,35 @@ Real friction encountered while building. Submitted for the Amazon "Build, Ship,
 - **Workaround:** Feature-detects and hides the mic button with an explanatory tooltip when unavailable;
   docs recommend `https://` or localhost for the voice demo.
 - **Suggestion:** (Browser-level, not Amazon's.) Noted here because it affects the demo plan.
+
+## F-07 — Vega Virtual Device (VVD) omits WebView engine from system image
+- **Attempted:** Verify the SPOTLIGHT TV UI on Amazon's official Vega Virtual Device simulator (SDK 0.24.12112)
+  using a React Native WebView wrapper package (`.vpkg`).
+- **Expected:** The VVD launches the WebView package and renders the `/tv` page, satisfying the
+  "running on simulator" demo-video requirement without physical hardware.
+- **Actual:** The VVD 0.24 image omits the Chromium-based WebView runtime
+  (`/com.amazon.kepler.webview_4@IWebview_4`). Initial `.vpkg` install fails on the missing module dependency.
+  Relaxing the manifest to skip the dependency allows installation, but the webview stem crashes immediately
+  with SIGABRT (`stem-init` process). The QEMU framebuffer shows a black screen.
+- **Severity:** High — the VVD is the official no-hardware verification path, and it cannot render web apps.
+- **Workaround:** Verified the TV UI in desktop Chrome at 1920x1080 instead. Silk browser on a physical
+  Fire TV Stick is the remaining on-device path. See `spotlight/vega-wrapper/VVD_VERIFICATION.md` for
+  full diagnostic logs and `vvd_screenshot.png` for the black-screen evidence.
+- **Suggestion:** Ship the WebView runtime module in the VVD system image, or provide a documented
+  alternative simulator for web-technology Fire TV apps.
+
+## F-08 — Canvas frame capture fails on cross-origin video (tainted canvas)
+- **Attempted:** TV self-awareness: capture a frame from the `<video>` element via `canvas.toDataURL()`
+  every 5 seconds and POST it to `/api/tv/context` for auto-attached frame analysis.
+- **Expected:** Works for any video source playing on the `/tv` page.
+- **Actual:** `canvas.toDataURL()` throws a security exception when the video source is cross-origin
+  and not CORS-enabled (tainted canvas). The Charade movie clip and other hosted video assets trigger
+  this if served from a different domain without proper CORS headers.
+- **Severity:** Medium — the auto-attached frame analysis degrades silently to metadata-only (title +
+  timecode + paused state) when canvas capture is blocked. The feature still works for same-origin
+  video and for the camera-snap path on the remote.
+- **Workaround:** Code catches the exception, logs a warning, and sends `frame_b64: null` so the backend
+  still gets title + timecode context. Frame analysis via the camera snap on `/remote` is unaffected
+  because the user uploads a photo directly.
+- **Suggestion:** (Browser-level security policy, not Amazon's.) Document the CORS requirement for
+  video assets, or use a server-side frame proxy for cross-origin content.
