@@ -236,7 +236,8 @@ async def analyze_frame_endpoint(req: FrameAnalysisRequest):
 async def voice_transcribe_endpoint(req: VoiceTranscribeRequest, request: Request):
     """Transcribe user audio base64 using faster-whisper with VAD & ghost-guard."""
     import base64 as _b64
-    client_ip = request.client.host if request.client else "unknown"
+    fwd = request.headers.get("x-forwarded-for", "")
+    client_ip = (fwd.split(",")[0].strip() if fwd else "") or (request.client.host if request.client else "unknown")
     if not _check_rate("stt:" + client_ip, 20, 60.0):
         return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 20 transcriptions per minute"})
     try:
@@ -248,7 +249,14 @@ async def voice_transcribe_endpoint(req: VoiceTranscribeRequest, request: Reques
 
     _stt_start = time.perf_counter()
     loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(None, transcribe_audio_bytes, audio_bytes, req.mime)
+    try:
+        result = await loop.run_in_executor(None, transcribe_audio_bytes, audio_bytes, req.mime)
+    except Exception as e:
+        return JSONResponse(status_code=501, content={
+            "error": "stt_unavailable",
+            "detail": "speech-to-text not installed (pip install faster-whisper); type your question instead.",
+            "text": "", "segments": [],
+        })
     metrics.record_stt((time.perf_counter() - _stt_start) * 1000.0)
     # Transcribed text hits the intent router first
     intent = classify_intent(result.get("text", ""))
@@ -257,8 +265,14 @@ async def voice_transcribe_endpoint(req: VoiceTranscribeRequest, request: Reques
 
 
 @app.post("/api/voice/speak")
-async def voice_speak_endpoint(req: VoiceSpeakRequest):
+async def voice_speak_endpoint(req: VoiceSpeakRequest, request: Request):
     """Synthesize text to audio/wav using Piper TTS in subprocess mode."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    client_ip = (fwd.split(",")[0].strip() if fwd else "") or (request.client.host if request.client else "unknown")
+    if not _check_rate("tts:" + client_ip, 20, 60.0):
+        return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 20 syntheses per minute"})
+    if len(req.text) > 2000:
+        return JSONResponse(status_code=413, content={"error": "text_too_long", "detail": "max 2000 chars per synthesis"})
     wav_bytes = await synthesize_speech(req.text)
     return Response(content=wav_bytes, media_type="audio/wav")
 
@@ -313,6 +327,8 @@ async def handle_ask(req: AskRequest):
     3. Log to session history and generate learning companion note
     4. Apply answered overlay to TV state and broadcast
     """
+    if not _check_rate("ask:global", 60, 60.0):
+        return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 60 questions per minute"})
     beat_id = req.beat_id or state_manager.get_state().current_beat
     scene = config.SCENES.get(beat_id, config.SCENES[BeatId.KIDS])
     timestamp = req.timestamp or scene.timestamp

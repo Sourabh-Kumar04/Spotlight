@@ -35,7 +35,7 @@ pure black). Amazon's own guidance: *"Test your app using a Fire TV Stick instea
 Full verification logs: `VVD_VERIFICATION.md`. The wrapper source was removed from
 this repo; the record above is kept so the attempt stays auditable.
 
-## Path 2: Silk browser — fastest on-device check, zero packaging
+## Path 2: TV Bro (sideloaded — Silk ships as a broken stub on the LDI cloud image and crashes on launch) browser — fastest on-device check, zero packaging
 
 Every Fire TV Stick ships Amazon's Silk browser. Open `http://<host-ip>:8000/tv`
 (or your hosted URL) in Silk. Works on Fire OS and Vega OS alike. Good enough to

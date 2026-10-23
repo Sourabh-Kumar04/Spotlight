@@ -20,8 +20,8 @@ You're watching TV. Something happens on screen that confuses you:
 You don't want to type a query into a sluggish TV keyboard or open a mobile browser and search through search engine clutter.
 
 **With SPOTLIGHT, you tap ONE button on your phone remote:**
-1. **Instant Frame Freeze:** The TV freezes the broadcast moment.
-2. **Telemetry & Visual Analysis:** The backend analyzes the broadcast metadata, frame timecode, and question.
+1. **Instant Frame Freeze:** The TV freezes the playback moment.
+2. **Telemetry & Visual Analysis:** The backend analyzes the playback metadata, frame timecode, and question.
 3. **High-Contrast 10-Foot Overlay:** A big-type, high-contrast overlay explains the answer in seconds on the TV screen.
 4. **Learning Companion Seed:** The system captures your curiosity query into a persistent profile (*"You've asked about fouls twice this week"*).
 
@@ -67,7 +67,7 @@ Spotlight ships 8 knowledge engines (one per beat in the Feature Map above). The
 | **Beat 3** | **Sports (Soccer)** | Soccer match scene | *"Why was that a foul?"* | Replay breakdown + IFAB Law 12 reckless-challenge ruling. |
 | **Beat 4** | **News Fact-Check** | News segment | *"Is that claim true?"* | Non-partisan scientific audit: Apollo 11 moon landing **VERIFIED TRUE** with 2 independent citations. |
 
-> **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms**) via curated rule engines. Free-form questions route to the LLM fallback chain (Bedrock → OpenAI → Ollama `llama3.2:3b` → deterministic contextual synthesis), falling back gracefully to context-aware synthesis when all LLMs are offline.
+> **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms** engine lookup; full tap-to-answer pipeline is seconds) via curated rule engines. Free-form questions route to the LLM fallback chain (Bedrock → OpenAI → Ollama `llama3.2:3b` → deterministic contextual synthesis), falling back gracefully to context-aware synthesis when all LLMs are offline.
 
 ---
 
@@ -79,8 +79,9 @@ Spotlight ships 8 knowledge engines (one per beat in the Feature Map above). The
 
 ### 1. Install Dependencies
 ```bash
+uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
-# Or: pip install fastapi "uvicorn[standard]" httpx jinja2 websockets pytest pytest-asyncio
+# Or with plain pip: pip install fastapi "uvicorn[standard]" httpx jinja2 websockets python-dotenv pillow pytest pytest-asyncio
 ```
 
 ### 2. (Optional) Configure
@@ -88,7 +89,7 @@ uv pip install -e ".[dev]"
 cp .env.example .env
 ```
 Every setting is optional — see `.env.example` for the full list. What works with **zero keys**:
-- the full 4-beat demo tour, all 8 knowledge engines, TV self-awareness, pairing, voice commands, and the answer cache.
+- the full 4-beat demo tour, all 8 knowledge engines, TV self-awareness, pairing, device-control commands (typed), and the answer cache. (Voice *input* needs faster-whisper; see below.)
 - free-form questions fall back to the built-in contextual synthesis engine.
 
 Add keys to unlock more:
@@ -130,7 +131,7 @@ Run the full pytest suite (87 automated tests covering engines, fallback, state 
 python3 -m pytest -v
 ```
 
-All 87 tests pass green.
+All 91 tests pass green.
 
 ---
 
@@ -148,7 +149,7 @@ When viewing `/tv` in a browser or Fire TV test browser:
 
 ## Production Hardening
 
-- **Pairing codes.** No more guessable `default` session. Each `/tv` load generates a random code (`SPOT-4821`), shown top-right on the TV; the phone enters it once to pair (remembered in localStorage). `?session=` still overrides for dev.
+- **Pairing codes.** No more guessable `default` session. Each `/tv` load generates a random code (`SPOT-4821`), shown top-right on the TV; the phone enters it once to pair (remembered in localStorage). `?session=` still overrides for dev. (Pairing is a UX convenience for demos, not a server-enforced access control — the hub accepts any session id.)
 - **TV voice state on the phone.** The TV broadcasts `listening / thinking / speaking` over the session hub; `/remote` mirrors it, and shows `RECONNECTING` instead of silence when the socket drops.
 - **Spoiler-aware answers.** When the TV reports a playback timestamp, the LLM prompt is instructed to use only information from up to that point — no plot twists from later in the film.
 - **Answer cache.** `(title, 30s timestamp bucket, question)` → answer, in-memory, 1h TTL. Repeat questions answer instantly (measured: 3.89s → 0.00s on repeat).

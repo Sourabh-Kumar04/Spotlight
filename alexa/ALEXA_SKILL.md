@@ -7,7 +7,7 @@ faster-whisper STT), not Alexa.
 
 ## What is here
 
-- `interaction-model.json` — the Alexa interaction model: `AskSpotlightIntent` with a
+- `interaction-model.json (removed — skill is a design stub, see doc header)` — the Alexa interaction model: `AskSpotlightIntent` with a
   `{Question}` slot (AMAZON.SearchQuery), invocation name "spotlight".
 
 That is the only file. There is no skill backend, no Lambda handler, no ASK SDK code.
@@ -17,7 +17,7 @@ That is the only file. There is no skill backend, no Lambda handler, no ASK SDK 
 An Amazon developer account is required to deploy an Alexa Skill. The steps would be:
 
 1. https://developer.amazon.com/alexa/console/ask → Create Skill → Custom → Alexa-hosted or self-hosted.
-2. Paste `interaction-model.json` into the Build > JSON Editor, then Build Model.
+2. Paste `interaction-model.json (removed — skill is a design stub, see doc header)` into the Build > JSON Editor, then Build Model.
 3. Deploy a skill backend (AWS Lambda, Python ASK SDK):
    ```python
    from ask_sdk_core.skill_builder import SkillBuilder

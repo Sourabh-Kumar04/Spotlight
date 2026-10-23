@@ -46,3 +46,6 @@ piper/
 *.swo
 .DS_Store
 Thumbs.db
+
+# secrets — never commit
+.env

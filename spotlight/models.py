@@ -115,5 +115,5 @@ class VoiceTranscribeResponse(BaseModel):
 
 
 class VoiceSpeakRequest(BaseModel):
-    text: str
+    text: str = Field(max_length=2000)
 

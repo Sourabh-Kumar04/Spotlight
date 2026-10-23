@@ -592,7 +592,7 @@
   // web-page control is the correct substrate.
   function executeControl(msg) {
     console.log("[Spotlight TV] Executing web-page device control:", msg);
-    const video = document.querySelector("video") || movieVideo;
+    const video = (typeof customVideoActive !== "undefined" && customVideoActive && document.getElementById("customVideo")) || document.getElementById("movieVideo") || document.querySelector("video");
     const action = (msg.action || "").toLowerCase();
     const seconds = Number(msg.seconds) || 10;
 
@@ -639,7 +639,7 @@
   let captureSessionId = sessionId; // reuse session WS id
 
   function captureAndPostFrame() {
-    const video = document.querySelector("video") || movieVideo;
+    const video = (typeof customVideoActive !== "undefined" && customVideoActive && document.getElementById("customVideo")) || document.getElementById("movieVideo") || document.querySelector("video");
     if (!video || !video.videoWidth) return; // no video element / not loaded yet
 
     const maxW = 640;

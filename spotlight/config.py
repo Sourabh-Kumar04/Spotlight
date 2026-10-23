@@ -1,6 +1,8 @@
 """Configuration and predefined scenes for Spotlight."""
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import shutil
 from typing import Dict
 from spotlight.models import BeatId, SceneData

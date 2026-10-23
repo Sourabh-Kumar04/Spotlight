@@ -206,7 +206,7 @@ Fire TV interfaces must be readable from across a room (the 10-foot UI guideline
 | LLM Fallback | AWS Bedrock (Nova Lite) → OpenAI → Ollama (llama3.2:3b) → contextual synthesis |
 | Vision | Ollama llava / Bedrock vision / PIL heuristic |
 | State Sync | WebSockets (state hub + session hub) |
-| Testing | pytest, pytest-asyncio (87 tests) |
+| Testing | pytest, pytest-asyncio (91 tests) |
 
 ---
 
