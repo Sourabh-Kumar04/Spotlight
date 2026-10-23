@@ -135,7 +135,11 @@ backend the TV polls. For the demo video, `/demo` shows TV + remote side by side
 ## Notes for judges
 
 - The demo video is recorded from `/demo?demo=1` (deterministic, zero network dependency).
-- Voice input (mic button) requires a secure context: `https://` or `localhost`.
-  On plain-HTTP LAN it hides itself with an explanatory note.
-- Spoken answers use the browser's built-in speech engine — expected to work in
-  Silk and Amazon's Web App Runtime, unverified on-device.
+- Voice input (mic button) uses `MediaRecorder` for audio capture and `faster-whisper` for server-side
+  transcription. The Web Speech API provides live partial transcript previews when available (requires
+  `https://` or `localhost`); it is not required for the main transcription path.
+- Voice reply plays on the phone via Piper TTS (`POST /api/voice/speak` → audio/wav) and on the TV via
+  the browser's `speechSynthesis` API. Both paths are implemented; on-device verification pending.
+- TV self-awareness captures a frame every 5 seconds via canvas and POSTs to `/api/tv/context`. This
+  works for same-origin video; cross-origin video without CORS headers produces a tainted canvas
+  (the code degrades gracefully to metadata-only context — see F-08).
