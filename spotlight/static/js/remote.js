@@ -39,18 +39,30 @@
   // --- Session-Isolated WebSocket Hub (/ws/session/{session_id}) ---
   let sessionWs = null;
   let speechRec = null;
-  const sessionId = new URLSearchParams(window.location.search).get("session") || "default";
+  const _sessionParam = new URLSearchParams(window.location.search).get("session");
+  let sessionId = _sessionParam || localStorage.getItem("spotlight_pairing_code") || "";
 
   function connectSessionWS() {
+    if (!sessionId) { _showPairingPrompt(); _renderTvState("unpaired"); return; }
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const hubUrl = `${protocol}//${window.location.host}/ws/session/${sessionId}`;
     sessionWs = new WebSocket(hubUrl);
 
     sessionWs.onopen = () => {
       console.log(`[Remote] Connected to session hub: ${sessionId}`);
+      _hidePairingPrompt();
+      _renderTvState("idle");
+    };
+
+    sessionWs.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg && msg.kind === "tv_voice_state") _renderTvState(msg.state);
+      } catch (_) {}
     };
 
     sessionWs.onclose = () => {
+      _renderTvState("reconnecting");
       setTimeout(connectSessionWS, 1500);
     };
 
@@ -58,6 +70,47 @@
       sessionWs.close();
     };
   }
+
+  // --- Pairing + TV voice-state mirror ---
+  function _showPairingPrompt() {
+    const p = document.getElementById("pairingPrompt");
+    if (p) p.style.display = "block";
+  }
+  function _hidePairingPrompt() {
+    const p = document.getElementById("pairingPrompt");
+    if (p) p.style.display = "none";
+  }
+  function _renderTvState(state) {
+    const el = document.getElementById("tvVoiceState");
+    if (!el) return;
+    const labels = { idle: "TV IDLE", listening: "TV LISTENING", thinking: "TV THINKING",
+      speaking: "TV SPEAKING", reconnecting: "RECONNECTING", unpaired: "NOT PAIRED" };
+    el.textContent = labels[state] || ("TV " + String(state).toUpperCase());
+    el.dataset.state = state;
+  }
+  function pairWithCode(code) {
+    code = (code || "").trim().toUpperCase();
+    if (!code) return;
+    localStorage.setItem("spotlight_pairing_code", code);
+    sessionId = code;
+    try { if (sessionWs) sessionWs.close(); } catch (_) {}
+    _hidePairingPrompt();
+    connectSessionWS();
+  }
+
+  // Pairing form wiring
+  (function _wirePairing() {
+    const bind = () => {
+      const btn = document.getElementById("pairBtn");
+      const input = document.getElementById("pairInput");
+      if (!btn || !input) return;
+      btn.addEventListener("click", () => pairWithCode(input.value));
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") pairWithCode(input.value); });
+      if (sessionId) input.value = sessionId;
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+    else bind();
+  })();
 
   function publishHub(msg) {
     if (sessionWs && sessionWs.readyState === WebSocket.OPEN) {

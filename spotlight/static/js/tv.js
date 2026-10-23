@@ -228,6 +228,11 @@
   function setVoiceState(state, transcript, progressPct) {
     currentVoiceState = state || "idle";
     renderVoicePillUI(transcript, progressPct);
+    try {
+      if (typeof sessionWs !== "undefined" && sessionWs && sessionWs.readyState === WebSocket.OPEN) {
+        sessionWs.send(JSON.stringify({ kind: "tv_voice_state", state: currentVoiceState }));
+      }
+    } catch (_) {}
   }
 
   function updateSpeakingProgress(pct) {
@@ -524,7 +529,18 @@
   // --- Session-Isolated WebSocket Hub (/ws/session/{session_id}) ---
   // Subscribes to /remote voice_state updates and control commands.
   let sessionWs = null;
-  const sessionId = new URLSearchParams(window.location.search).get("session") || "default";
+  const _sessionParam = new URLSearchParams(window.location.search).get("session");
+  const sessionId = _sessionParam || ("SPOT-" + Math.floor(1000 + Math.random() * 9000));
+  // Show the pairing code on screen so the phone can join this TV session.
+  function _showPairingCode() {
+    const badge = document.getElementById("pairingBadge");
+    const code = document.getElementById("pairingCode");
+    if (badge && code) { code.textContent = sessionId; badge.style.display = "flex"; }
+  }
+  if (!_sessionParam) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", _showPairingCode);
+    else _showPairingCode();
+  }
 
   function connectSessionWS() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
