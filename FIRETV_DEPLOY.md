@@ -24,68 +24,16 @@ works on the newest Fire TV Sticks running Vega OS (see the Vega OS note below).
 - Privacy policy URL + data-handling statements are mandatory.
 - Amazon expects testing on a physical Fire TV device, not just an emulator.
 
-## Path 1b: Vega Virtual Device — record the demo on Amazon's official simulator
+## Path 1b: Vega Virtual Device — ATTEMPTED AND CLOSED
 
-This is the most submission-safe way to satisfy the "running on an actual Fire TV
-device or the Fire TV/Vega simulator" demo-video requirement without hardware.
+This path was fully attempted: Vega SDK 0.24 installed, React Native WebView wrapper
+built, `.vpkg` packaged and installed on the Virtual Device. It is a dead end — the
+0.24 VVD system image omits the Chromium WebView engine (0-byte `icudtl.dat`
+placeholder; the webview container crashes with SIGABRT and screenshots come out
+pure black). Amazon's own guidance: *"Test your app using a Fire TV Stick instead."*
 
-Prerequisites (from Amazon's docs): Vega SDK is available for **Mac (Intel & M-series)
-and Linux** — it runs in WSL. You need Node 20+, JDK 21, Python 3.
-
-1. Install the Vega SDK + developer tools in WSL:
-   - Needs Node 20+, JDK 21 (Eclipse Temurin 21), and Python 3.
-   - On WSL2, set `TMPDIR=$HOME/tmp` to ensure sufficient disk space during VVD extraction:
-     ```bash
-     mkdir -p "$HOME/tmp" && export TMPDIR="$HOME/tmp"
-     curl -fsSL https://sdk-installer.vega.labcollab.net/get_vvm.sh | bash
-     source ~/vega/env
-     vega sdk install 0.24.12112
-     ```
-   - WSLg display setup:
-     ```bash
-     export DISPLAY=:0
-     export WAYLAND_DISPLAY=wayland-0
-     export XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
-     ```
-2. Start the simulator:
-   ```
-   vega virtual-device start --gui
-   ```
-3. Vega runs apps packaged as `.vpkg` (not APKs). For a web app like SPOTLIGHT,
-   Amazon's documented pattern is a thin React Native wrapper using their WebView
-   component pointed at your URL:
-   https://developer.amazon.com/docs/vega/0.21/develop-your-app-with-webview.html
-   ```tsx
-   import { WebView } from "@amazon-devices/webview";
-   // ...
-   <WebView hasTVPreferredFocus={true}
-            source={{ uri: "https://<your-host>/tv" }}
-            javaScriptEnabled={true} />
-   ```
-4. Build the wrapper (`npm run build:release` → `build/x86_64-release/*.vpkg`
-   on x86_64 Linux) and install it on the running virtual device:
-   ```bash
-   cd spotlight/vega-wrapper
-   npm run build:release
-   vega run-app build/x86_64-release/spotlighttv_x86_64.vpkg
-   ```
-   (The release package `spotlighttv_x86_64.vpkg` is pre-built in `spotlight/vega-wrapper/build/x86_64-release/`).
-5. Screen-record the virtual device window while you drive the demo
-   (the `/remote` page on your phone/laptop talks to the same backend).
-
-Honest effort estimate: this is a new toolchain (Vega CLI + RN wrapper + VPKG build).
-Budget a few hours if you've never touched it. The sample apps
-(github.com/AmazonAppDev/react-native-hello-world) are the fastest starting point —
-clone one, swap the WebView URI to your SPOTLIGHT `/tv` URL, rebuild.
-
-> [!NOTE]
-> **Vega Virtual Device (VVD) WebView Limitation**:
-> The Vega Virtual Device emulator (0.24 image) omits the full Chromium WebView
-> runtime (`/com.amazon.kepler.webview_4@IWebview_4`). Attempting to launch a
-> WebView package on the VVD will trigger Amazon's notification: *"The Vega Virtual
-> Device is missing modules that are available on a physical device. Test your app
-> using a Fire TV Stick instead."* See `spotlight/vega-wrapper/VVD_VERIFICATION.md`
-> and `vvd_screenshot.png` for detailed logs and verification output.
+Full verification logs: `VVD_VERIFICATION.md`. The wrapper source was removed from
+this repo; the record above is kept so the attempt stays auditable.
 
 ## Path 2: Silk browser — fastest on-device check, zero packaging
 

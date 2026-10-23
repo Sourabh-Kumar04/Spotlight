@@ -74,7 +74,7 @@ Real friction encountered while building. Submitted for the Amazon "Build, Ship,
   with SIGABRT (`stem-init` process). The QEMU framebuffer shows a black screen.
 - **Severity:** High — the VVD is the official no-hardware verification path, and it cannot render web apps.
 - **Workaround:** Verified the TV UI in desktop Chrome at 1920x1080 instead. Silk browser on a physical
-  Fire TV Stick is the remaining on-device path. See `spotlight/vega-wrapper/VVD_VERIFICATION.md` for
+  Fire TV Stick is the remaining on-device path. See `VVD_VERIFICATION.md` for
   full diagnostic logs and `vvd_screenshot.png` for the black-screen evidence.
 - **Suggestion:** Ship the WebView runtime module in the VVD system image, or provide a documented
   alternative simulator for web-technology Fire TV apps.
