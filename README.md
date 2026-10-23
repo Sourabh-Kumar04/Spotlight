@@ -37,13 +37,10 @@ You don't want to type a query into a sluggish TV keyboard or open a mobile brow
 | 4 | News | Is that claim true? | Fact-check (live API or curated) |
 | 5 | Cooking | What spice did they just add? | Recipe auto-builder |
 | 6 | Esports | Why did they lose that fight? | Coach's breakdown |
-| 7 | Shopping | What shoes is he wearing? | Shoppable card (demo catalog) |
+| 7 | Shopping | What shoes is he wearing? | Real product identification (e.g. Forrest Gump's Nike Cortez) |
 | 8 | Language | What did they just say? | ES→EN translation + context |
 
-Plus: **voice input** (mic button, Web Speech API), **3 languages** (EN/ES/HI),
-**frame analysis** (`POST /api/analyze-frame`), **learning companion**
-(60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama
-→ curated** LLM fallback chain.
+Plus: **voice Q&A** (push-to-talk → faster-whisper STT → Piper TTS voice reply), **voice commands** (pause/play/rewind/volume), **TV self-awareness** (/tv pushes title + frame every 5s, auto-attached to every question), **3 languages** (EN/ES/HI), **frame analysis** (`POST /api/analyze-frame`), **learning companion** (60-second explainers after 2+ asks in a topic), **Bedrock → OpenAI → Ollama → curated** LLM fallback chain.
 
 ---
 
@@ -65,10 +62,10 @@ Spotlight includes 4 specialized knowledge engines designed for real-world TV wa
 
 | Beat | Category | Channel & Scene | Canonical Question | Engine Output |
 | :--- | :--- | :--- | :--- | :--- |
-| **Beat 1** | **Kids Documentary** | *Planet Earthlings: Wonders of the Sky* (Discovery Horizon 4K) | *"Why is the sky blue?"* | Warm 3-sentence parent read-aloud explanation of Rayleigh scattering; high-contrast; child-friendly. |
-| **Beat 2** | **Cinema Thriller** | *The Syndicate Protocol* (Prime Cinema Premier) | *"Who is that guy and why is everyone mad at him?"* | Living Cast catch-up card: Director Vance, dock betrayal 10 mins ago, 15-minute facility purge stakes. |
-| **Beat 3** | **Sports (Soccer)** | *Madrid vs Milan* (Sky Sports Matchday Live) | *"Why was that a foul?"* | Replay breakdown of 74:12 studs-up sliding tackle + IFAB Law 12 reckless challenge ruling & yellow card. |
-| **Beat 4** | **News Fact-Check** | *Space Exploration Archives* (World News Central) | *"Is that claim true?"* | Non-partisan scientific audit: Apollo 11 moon landing **VERIFIED TRUE** with 2 independent citations. |
+| **Beat 1** | **Kids Documentary** | Nature documentary scene | *"Why is the sky blue?"* | Warm 3-sentence parent read-aloud explanation of Rayleigh scattering; high-contrast; child-friendly. |
+| **Beat 2** | **Cinema Thriller** | *Charade* (1963, public domain) playing full-bleed | *"Who is that man?"* | Cary Grant, as Peter Joshua — character catch-up from live frame + title context. |
+| **Beat 3** | **Sports (Soccer)** | Soccer match scene | *"Why was that a foul?"* | Replay breakdown + IFAB Law 12 reckless-challenge ruling. |
+| **Beat 4** | **News Fact-Check** | News segment | *"Is that claim true?"* | Non-partisan scientific audit: Apollo 11 moon landing **VERIFIED TRUE** with 2 independent citations. |
 
 > **Hybrid Intelligence Guarantee:** Canonical questions resolve instantly (**<100ms**) via curated rule engines. Free-form questions route seamlessly to the LLM fallback (Ollama `llama3.2:3b` default or OpenAI via environment variables), falling back gracefully to context-aware synthesis if offline.
 
@@ -112,13 +109,13 @@ To record a demo video or run deterministic tests without any network dependency
 
 ## Testing
 
-Run the full pytest suite (39 automated tests covering engines, fallback, state machine, API, and WebSockets):
+Run the full pytest suite (87 automated tests covering engines, fallback, state machine, API, and WebSockets):
 
 ```bash
 python3 -m pytest -v
 ```
 
-All 39 tests pass green.
+All 87 tests pass green.
 
 ---
 
