@@ -19,9 +19,17 @@ from spotlight.hub import hub
 from spotlight.intent import classify_intent
 from spotlight.vision import analyze_frame
 from spotlight.voice import transcribe_audio_bytes, synthesize_speech
-from spotlight.models import AskRequest, BeatId, TVStatus, VoiceTranscribeRequest, VoiceSpeakRequest
+from spotlight.models import (
+    AskRequest,
+    BeatId,
+    TVStatus,
+    VoiceTranscribeRequest,
+    VoiceSpeakRequest,
+    TVContextRequest,
+)
 from spotlight.session import session_manager
 from spotlight.state import state_manager
+from spotlight.tv_context import tv_context_store
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -193,6 +201,42 @@ async def voice_speak_endpoint(req: VoiceSpeakRequest):
     return Response(content=wav_bytes, media_type="audio/wav")
 
 
+# --- TV Self-Awareness: context capture ---
+
+@app.post("/api/tv/context")
+async def set_tv_context(req: TVContextRequest):
+    """Store the latest captured TV frame + metadata per session.
+
+    Called automatically by tv.js every 5 seconds.  The ask pipeline
+    auto-attaches this context when an incoming /api/ask request has no
+    explicit context_title / frame_b64.
+    """
+    ctx = tv_context_store.set(
+        req.session_id or "default",
+        title=req.title,
+        current_time=req.currentTime,
+        paused=req.paused,
+        frame_b64=req.frame_b64,
+    )
+    return {"status": "ok", "session_id": ctx.session_id}
+
+
+@app.get("/api/tv/context/{session_id}")
+async def get_tv_context(session_id: str):
+    """Retrieve the latest stored TV context for a session (for debugging / probing)."""
+    ctx = tv_context_store.get(session_id)
+    if ctx is None:
+        return {"status": "not_found", "session_id": session_id}
+    return {
+        "status": "ok",
+        "session_id": ctx.session_id,
+        "title": ctx.title,
+        "currentTime": ctx.current_time,
+        "paused": ctx.paused,
+        "has_frame": bool(ctx.frame_b64),
+    }
+
+
 @app.post("/api/ask")
 async def handle_ask(req: AskRequest):
     """Core Ask flow:
@@ -205,9 +249,19 @@ async def handle_ask(req: AskRequest):
     scene = config.SCENES.get(beat_id, config.SCENES[BeatId.KIDS])
     timestamp = req.timestamp or scene.timestamp
 
+    # --- TV self-awareness: auto-attach session context when not explicit ---
+    effective_context_title = req.context_title
+    effective_frame_b64 = req.frame_b64
+    tv_ctx = tv_context_store.get(req.session_id)
+    if tv_ctx:
+        if not effective_context_title and tv_ctx.title:
+            effective_context_title = tv_ctx.title
+        if not effective_frame_b64 and tv_ctx.frame_b64:
+            effective_frame_b64 = tv_ctx.frame_b64
+
     # 1. TV enters analyzing state
     await state_manager.trigger_freeze_and_analyze(
-        timestamp, context_title=req.context_title
+        timestamp, context_title=effective_context_title
     )
 
     # Small delay for realistic Fire TV analysis perception if demo mode
@@ -221,8 +275,8 @@ async def handle_ask(req: AskRequest):
         question=req.question,
         custom_scene=scene,
         lang=getattr(req, "lang", "en") or "en",
-        context_title=req.context_title,
-        frame_b64=req.frame_b64,
+        context_title=effective_context_title,
+        frame_b64=effective_frame_b64,
     )
 
     # 3. Log to session history
@@ -234,7 +288,7 @@ async def handle_ask(req: AskRequest):
         is_canonical=answer.is_canonical,
         latency_ms=answer.latency_ms,
         custom_note=answer.companion_note or None,
-        context_title=req.context_title,
+        context_title=effective_context_title,
     )
     answer.companion_note = session_item.companion_note
 
@@ -261,6 +315,7 @@ async def reset_system():
     """Reset state machine and session history."""
     await state_manager.reset()
     session_manager.clear()
+    tv_context_store.clear()
     return {"status": "reset", "state": state_manager.get_state().model_dump()}
 
 
@@ -405,10 +460,24 @@ async def websocket_endpoint(websocket: WebSocket):
                 b_id = BeatId(beat_val) if beat_val in BeatId._value2member_map_ else state_manager.get_state().current_beat
                 q = data.get("question", "")
                 ts = data.get("timestamp")
+                sid = data.get("session_id", "default")
                 scene = config.SCENES.get(b_id, config.SCENES[BeatId.KIDS])
 
-                await state_manager.trigger_freeze_and_analyze(ts or scene.timestamp)
-                answer = await knowledge_router.resolve(beat_id=b_id, question=q, custom_scene=scene)
+                # Auto-attach TV context
+                eff_title = data.get("context_title")
+                eff_frame = data.get("frame_b64")
+                tv_ctx = tv_context_store.get(sid)
+                if tv_ctx:
+                    if not eff_title and tv_ctx.title:
+                        eff_title = tv_ctx.title
+                    if not eff_frame and tv_ctx.frame_b64:
+                        eff_frame = tv_ctx.frame_b64
+
+                await state_manager.trigger_freeze_and_analyze(ts or scene.timestamp, context_title=eff_title)
+                answer = await knowledge_router.resolve(
+                    beat_id=b_id, question=q, custom_scene=scene,
+                    context_title=eff_title, frame_b64=eff_frame,
+                )
                 session_item = session_manager.record_ask(
                     beat_id=b_id,
                     category=scene.category,
@@ -417,6 +486,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     is_canonical=answer.is_canonical,
                     latency_ms=answer.latency_ms,
                     custom_note=answer.companion_note,
+                    context_title=eff_title,
                 )
                 answer.companion_note = session_item.companion_note
                 await state_manager.apply_answer(answer)

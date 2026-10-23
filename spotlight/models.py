@@ -47,6 +47,7 @@ class AskRequest(BaseModel):
     lang: str = "en"  # en | es | hi
     context_title: Optional[str] = None
     frame_b64: Optional[str] = None
+    session_id: str = "default"
 
 
 class AnswerPayload(BaseModel):
@@ -96,6 +97,16 @@ class SessionHistoryItem(BaseModel):
 class VoiceTranscribeRequest(BaseModel):
     audio_b64: str
     mime: Optional[str] = "audio/webm; codecs=opus"
+
+
+class TVContextRequest(BaseModel):
+    """Payload POSTed by the TV client every few seconds."""
+
+    session_id: str = "default"
+    title: str = ""
+    currentTime: str = ""
+    paused: bool = False
+    frame_b64: Optional[str] = None
 
 
 class VoiceTranscribeResponse(BaseModel):
