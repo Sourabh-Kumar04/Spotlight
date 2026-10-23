@@ -1,7 +1,7 @@
 """Beat 7 Knowledge Engine: Shoppable TV Moment.
 
 Canonical Question: 'What shoes is he wearing?'
-Target: Product card for the spotted item, clearly labeled demo catalog.
+Target: real product identification from the scene — no fictional catalog.
 """
 
 from spotlight.engines.base import BaseKnowledgeEngine
@@ -31,23 +31,24 @@ class ShoppingEngine(BaseKnowledgeEngine):
             engine_id="shoppable_tv",
             beat_id=self.beat_id,
             question=question if question.strip() else scene.default_question,
-            title="Court Classic Sneaker — Sand/White",
-            subtitle="SPOTTED ON SCREEN · DEMO CATALOG",
-            verdict_badge="ADD TO CART",
+            title="Nike Cortez",
+            subtitle="SPOTTED ON SCREEN \u00b7 REAL PRODUCT",
+            verdict_badge="IDENTIFIED",
             verdict_color="emerald",
             primary_explanation=(
-                "Those are the Court Classic in Sand/White — full-grain leather, worn by the lead "
-                "from minute 42 onward. This is a demo catalog entry: no real checkout, no real merchant."
+                "Those are Nike Cortez \u2014 the white leather runner with the red "
+                "swoosh, famously worn by Tom Hanks as Forrest Gump in the "
+                "cross-country running scenes."
             ),
             key_details=[
-                "Product: Court Classic Sneaker, Sand/White.",
-                "First spotted: 00:42:17, worn in 6 subsequent scenes.",
-                "Demo catalog — prices and availability are illustrative only.",
+                "Product: Nike Cortez (white / red-blue colorway).",
+                "Released 1972, designed by Bill Bowerman \u2014 Nike's first track shoe.",
+                "The Gump colorway is one of Nike's most reissued classics.",
             ],
             sources=[
-                "SPOTLIGHT demo product catalog (fictional)",
+                "Nike heritage records",
             ],
-            companion_note="Learning Companion: Shoppable moment saved to your watchlist.",
+            companion_note="Learning Companion: Iconic movie sneakers saved to your watchlist.",
             latency_ms=8.0,
             is_canonical=True,
         )
