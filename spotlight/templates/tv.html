@@ -80,9 +80,12 @@
         </div>
       </section>
 
-    </main>
+      <!-- Custom video player (for "play any URL" feature) -->
+      <section id="sceneCustom" class="scene-custom" style="display:none; width:100%; height:100%; background:#000;">
+        <video id="customVideo" class="custom-video" style="width:100%; height:100%; object-fit:contain;" autoplay muted playsinline></video>
+      </section>
 
-    <!-- Scene Bottom Badge -->
+    </main>
     <div id="sceneLabel" class="scene-overlay-label">
       {{ scene.category | upper }} // {{ scene.timestamp }}
     </div>
@@ -158,6 +161,15 @@
           <div style="font-size:1rem;color:#94a3b8;">{{ scene.channel if scene else '' }} &middot; {{ scene.category if scene else '' }}</div>
         </div>
       </section>
+
+    <!-- Custom Video URL Bar (collapsed by default, toggle with U key or 📺 button) -->
+    <div id="customUrlBar" style="display:none; position:fixed; bottom:64px; left:50%; transform:translateX(-50%); z-index:1000; background:rgba(15,23,42,0.95); border:1px solid rgba(56,189,248,0.4); border-radius:10px; padding:10px 14px; gap:8px; align-items:center; max-width:90vw;">
+      <input type="text" id="customUrlInput" placeholder="Direct video URL (mp4/webm)…" style="flex:1; min-width:200px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px 12px; color:#e2e8f0; font-size:0.9rem;" />
+      <input type="text" id="customTitleInput" placeholder="Title…" style="width:160px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px 12px; color:#e2e8f0; font-size:0.9rem;" />
+      <button id="customUrlSubmit" type="button" style="background:#0ea5e9; border:none; border-radius:6px; padding:8px 18px; color:#fff; font-weight:700; font-size:0.85rem; cursor:pointer;">▶ PLAY</button>
+      <button id="customUrlClose" type="button" style="background:none; border:none; color:#f43f5e; cursor:pointer; font-size:1.1rem; padding:4px 8px;">✕</button>
+    </div>
+    <button id="customUrlToggle" type="button" title="Press U to toggle custom video URL" style="position:fixed; bottom:12px; right:12px; z-index:1000; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:6px 10px; color:#38bdf8; font-size:1.1rem; cursor:pointer;">📺</button>
 
     <!-- TV Key Controls (for demo navigation) -->
     <nav class="tv-control-bar">

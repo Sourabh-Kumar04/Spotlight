@@ -35,6 +35,90 @@
     news: sceneNews,
   };
 
+  // ---- Custom Video URL feature ----
+  let customVideoActive = false;
+  const customVideo = document.getElementById("customVideo");
+  const sceneCustom = document.getElementById("sceneCustom");
+  const customUrlBar = document.getElementById("customUrlBar");
+  const customUrlInput = document.getElementById("customUrlInput");
+  const customTitleInput = document.getElementById("customTitleInput");
+  const customUrlSubmit = document.getElementById("customUrlSubmit");
+  const customUrlClose = document.getElementById("customUrlClose");
+  const customUrlToggle = document.getElementById("customUrlToggle");
+
+  function hideAllScenes() {
+    Object.keys(scenesMap).forEach((beat) => {
+      if (scenesMap[beat]) scenesMap[beat].style.display = "none";
+    });
+    if (sceneCustom) sceneCustom.style.display = "none";
+  }
+
+  function playCustomVideo(url, title) {
+    if (!url || !customVideo) return;
+    hideAllScenes();
+    sceneCustom.style.display = "block";
+    // Set crossOrigin BEFORE src so CORS-enabled hosts yield clean canvas frames
+    customVideo.crossOrigin = "anonymous";
+    customVideo.src = url;
+    // Update hudTitle so TV self-awareness (captureAndPostFrame) picks up the title
+    if (titleEl && title) titleEl.textContent = title;
+    customVideoActive = true;
+    customVideo.play().catch((e) => console.warn("[Spotlight TV] Custom video play failed:", e));
+    if (customUrlBar) customUrlBar.style.display = "none";
+  }
+
+  function stopCustomVideo() {
+    if (!customVideo) return;
+    customVideo.pause();
+    customVideo.removeAttribute("src");
+    customVideo.load();
+    customVideoActive = false;
+    sceneCustom.style.display = "none";
+  }
+
+  function toggleUrlBar() {
+    if (!customUrlBar) return;
+    if (customUrlBar.style.display === "flex") {
+      customUrlBar.style.display = "none";
+    } else {
+      customUrlBar.style.display = "flex";
+      if (customUrlInput) customUrlInput.focus();
+    }
+  }
+
+  if (customUrlToggle) {
+    customUrlToggle.addEventListener("click", toggleUrlBar);
+  }
+  if (customUrlClose) {
+    customUrlClose.addEventListener("click", () => {
+      customUrlBar.style.display = "none";
+    });
+  }
+  if (customUrlSubmit) {
+    customUrlSubmit.addEventListener("click", () => {
+      const url = (customUrlInput.value || "").trim();
+      const title = (customTitleInput.value || "").trim() || "Custom Video";
+      if (url) playCustomVideo(url, title);
+    });
+  }
+  // Enter key in URL or title field triggers play
+  if (customUrlInput) {
+    customUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        customUrlSubmit.click();
+      }
+    });
+  }
+  if (customTitleInput) {
+    customTitleInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        customUrlSubmit.click();
+      }
+    });
+  }
+
   // ---- Spoken answers (Web Speech API) ----
   // The TV speaks the answer aloud; text overlay stays as visual support.
   let soundOn = true;
@@ -256,6 +340,12 @@
   function applyState(state, scene) {
     currentState = state;
 
+    // If custom video is active, don't let polling/WS overwrite our scene + title
+    if (customVideoActive) {
+      setFreezeVisuals(state.is_frozen, state.status);
+      return;
+    }
+
     // Update scene view
     Object.keys(scenesMap).forEach((beat) => {
       const el = scenesMap[beat];
@@ -304,7 +394,14 @@
     container.classList.toggle("is-analyzing", status === "analyzing");
     container.classList.toggle("is-answered", status === "answered");
 
-    if (movieVideo && currentState.current_beat === "movie") {
+    // Pause/resume the active video (movie or custom)
+    if (customVideoActive && customVideo) {
+      if (isFrozen) {
+        customVideo.pause();
+      } else {
+        customVideo.play().catch(() => {});
+      }
+    } else if (movieVideo && currentState.current_beat === "movie") {
       if (isFrozen) {
         movieVideo.pause();
       } else {
@@ -383,6 +480,9 @@
       }
     } else if (e.key === "m" || e.key === "M") {
       toggleSound();
+    } else if (e.key === "u" || e.key === "U") {
+      // Toggle custom video URL bar
+      toggleUrlBar();
     } else if (e.key === "1") {
       await fetch("/api/beat", {
         method: "POST",
@@ -464,6 +564,11 @@
       setVoiceState(state, msg.transcript);
     } else if (msg.kind === "control") {
       executeControl(msg);
+    } else if (msg.kind === "play_url") {
+      // Remote pushes a custom video URL + title to the TV
+      if (msg.url) {
+        playCustomVideo(msg.url, msg.title || "Custom Video");
+      }
     }
   }
 
