@@ -512,6 +512,59 @@
     }
   }
 
+  // --- TV Self-Awareness: periodic frame capture ---
+  // Every 5s, grab the <video> element's current frame via canvas, scale to
+  // max 640px wide, JPEG 0.7 quality, and POST to /api/tv/context.
+  let captureSessionId = sessionId; // reuse session WS id
+
+  function captureAndPostFrame() {
+    const video = document.querySelector("video") || movieVideo;
+    if (!video || !video.videoWidth) return; // no video element / not loaded yet
+
+    const maxW = 640;
+    const scale = Math.min(1, maxW / video.videoWidth);
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, w, h);
+
+    let frame_b64 = null;
+    try {
+      frame_b64 = canvas.toDataURL("image/jpeg", 0.7);
+      // Strip data URI prefix so backend gets pure base64
+      if (frame_b64.includes(",")) frame_b64 = frame_b64.split(",")[1];
+    } catch (e) {
+      // CORS / tainted canvas — fall back to metadata-only
+      console.warn("[Spotlight TV] Canvas capture blocked:", e);
+      frame_b64 = null;
+    }
+
+    // Determine what's playing: scene title from current state
+    const titleEl2 = document.getElementById("hudTitle");
+    const title = titleEl2 ? titleEl2.textContent.trim() : "";
+    const currentTime = (currentState.timestamp || "").toString();
+    const paused = video.paused;
+
+    fetch("/api/tv/context", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: captureSessionId,
+        title: title,
+        currentTime: currentTime,
+        paused: paused,
+        frame_b64: frame_b64,
+      }),
+    }).catch((e) => console.warn("[Spotlight TV] context POST failed:", e));
+  }
+
+  // Start the 5-second capture loop
+  setInterval(captureAndPostFrame, 5000);
+
   // Initialize
   connectWS();
   connectSessionWS();
