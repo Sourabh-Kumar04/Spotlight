@@ -87,3 +87,10 @@ hackathon (Fire TV track). Sent to the teams building these tools.
   workflow.
 - **Onboarding:** 5/10 — the SDK installs fine, but the web-app story hits a wall at the VVD.
 - **Build with it again?** Only if the WebView runtime ships in the system image.
+
+## Kiro CLI (AWS agentic coding assistant)
+- **Used for:** Implementing the TV self-awareness feature (canvas frame capture in tv.js, POST /api/tv/context backend store, auto-attach in the ask pipeline) after the primary agent's quota was exhausted — run headless via `kiro-cli chat --no-interactive --trust-all-tools`.
+- **What worked:** Followed a minimal 3-piece brief precisely, committed and pushed incrementally to a feature branch, ran the full pytest suite itself (87/87 green), and did a live end-to-end probe before reporting. Delivered in one shot where two prior agent attempts had failed with nothing committed.
+- **Needs work:** The `--agent default` profile does not exist (hard error: "Mode 'default' not found") — the flag must simply be omitted. Without `--no-interactive` the CLI hangs waiting for interactive input, which is fatal for automation. Error messages are clear, at least.
+- **Onboarding:** 8/10 — installed and authenticated already; the headless flags took one round of `--help` reading to get right.
+- **Build with it again?** Yes — it is now the fallback agent when the primary quota dies.
