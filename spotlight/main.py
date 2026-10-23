@@ -33,6 +33,32 @@ def _check_rate(key, max_hits, window_s):
     hits.append(now)
     _rate_buckets[key] = hits
     return True
+
+# --- Answer cache: (title, 30s timestamp bucket, question) -> (expires_at, AnswerPayload) ---
+_answer_cache = {}
+_CACHE_TTL_S = 3600
+_CACHE_MAX = 500
+
+def _cache_key(title, current_time, question):
+    try:
+        bucket = int(float(current_time)) // 30
+    except (TypeError, ValueError):
+        bucket = abs(hash(str(current_time))) % 1000000
+    return (title or "", bucket, (question or "").strip().lower())
+
+def _cache_get(key):
+    import time as _t
+    hit = _answer_cache.get(key)
+    if hit and hit[0] > _t.time():
+        return hit[1]
+    _answer_cache.pop(key, None)
+    return None
+
+def _cache_put(key, payload):
+    import time as _t
+    if len(_answer_cache) >= _CACHE_MAX:
+        _answer_cache.pop(next(iter(_answer_cache)))
+    _answer_cache[key] = (_t.time() + _CACHE_TTL_S, payload)
 from spotlight.vision import analyze_frame
 from spotlight.voice import transcribe_audio_bytes, synthesize_speech
 from spotlight.models import (
@@ -215,8 +241,8 @@ async def voice_transcribe_endpoint(req: VoiceTranscribeRequest, request: Reques
         return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 20 transcriptions per minute"})
     try:
         audio_bytes = _b64.b64decode(req.audio_b64)
-    if len(audio_bytes) > 10 * 1024 * 1024:
-        return JSONResponse(status_code=413, content={"error": "audio_too_large", "detail": "audio over 10MB"})
+        if len(audio_bytes) > 10 * 1024 * 1024:
+            return JSONResponse(status_code=413, content={"error": "audio_too_large", "detail": "audio over 10MB"})
     except Exception:
         return JSONResponse(status_code=400, content={"error": "invalid_base64", "text": "", "segments": []})
 
@@ -300,6 +326,8 @@ async def handle_ask(req: AskRequest):
             effective_context_title = tv_ctx.title
         if not effective_frame_b64 and tv_ctx.frame_b64:
             effective_frame_b64 = tv_ctx.frame_b64
+    effective_current_time = (tv_ctx.current_time if (tv_ctx and tv_ctx.current_time)
+                              else (req.timestamp or ""))
 
     # 1. TV enters analyzing state
     await state_manager.trigger_freeze_and_analyze(
@@ -311,19 +339,28 @@ async def handle_ask(req: AskRequest):
     if req.source == "demo":
         await asyncio.sleep(0.4)
 
-    # 2. Resolve knowledge engine
-    _ask_start = time.perf_counter()
-    answer = await knowledge_router.resolve_localized(
-        beat_id=beat_id,
-        question=req.question,
-        custom_scene=scene,
-        lang=getattr(req, "lang", "en") or "en",
-        context_title=effective_context_title,
-        frame_b64=effective_frame_b64,
-    )
-    metrics.record_ask((time.perf_counter() - _ask_start) * 1000.0)
-    if not answer.is_canonical:
-        metrics.record_llm_provider(answer.engine_id)
+    # 2. Resolve knowledge engine (answer cache first)
+    _cache_k = _cache_key(effective_context_title, effective_current_time, req.question)
+    _cached = _cache_get(_cache_k)
+    if _cached is not None:
+        metrics.record_cache_hit()
+        answer = _cached.model_copy()
+    else:
+        metrics.record_cache_miss()
+        _ask_start = time.perf_counter()
+        answer = await knowledge_router.resolve_localized(
+            beat_id=beat_id,
+            question=req.question,
+            custom_scene=scene,
+            lang=getattr(req, "lang", "en") or "en",
+            context_title=effective_context_title,
+            frame_b64=effective_frame_b64,
+            current_time=effective_current_time,
+        )
+        metrics.record_ask((time.perf_counter() - _ask_start) * 1000.0)
+        if not answer.is_canonical:
+            metrics.record_llm_provider(answer.engine_id)
+        _cache_put(_cache_k, answer)
 
     # 3. Log to session history
     session_item = session_manager.record_ask(

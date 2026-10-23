@@ -93,6 +93,17 @@ RULES:
 """
 
 
+def _spoiler_guard(current_time):
+    """Spoiler-aware instruction: never reveal plot points past the viewer's timestamp."""
+    if not current_time:
+        return ""
+    return (
+        "\nSPOILER RULE: The viewer is currently at " + str(current_time) +
+        " in this content. Answer using only information from up to this point. "
+        "Do NOT reveal plot twists, deaths, endings, or any developments from later in the content."
+    )
+
+
 class LLMFallbackEngine:
     def __init__(self) -> None:
         self.ollama_host = config.OLLAMA_HOST.rstrip("/")
@@ -110,13 +121,14 @@ class LLMFallbackEngine:
         scene: SceneData,
         timeout: float = 6.0,
         context_title: Optional[str] = None,
+        current_time: Optional[str] = None,
     ) -> AnswerPayload:
         start_time = time.perf_counter()
 
         # 1. Try AWS Bedrock first (preferred for the AWS Builder mini-challenge)
         try:
             result = await self._call_bedrock(
-                question, scene, timeout, context_title=context_title
+                question, scene, timeout, context_title=context_title, current_time=current_time
             )
             if result:
                 latency = (time.perf_counter() - start_time) * 1000.0
@@ -135,7 +147,7 @@ class LLMFallbackEngine:
         if self.openai_key:
             try:
                 result = await self._call_openai(
-                    question, scene, timeout, context_title=context_title
+                    question, scene, timeout, context_title=context_title, current_time=current_time
                 )
                 if result:
                     latency = (time.perf_counter() - start_time) * 1000.0
@@ -153,7 +165,7 @@ class LLMFallbackEngine:
         # 3. Try Ollama (llama3.2:3b default)
         try:
             result = await self._call_ollama(
-                question, scene, timeout, context_title=context_title
+                question, scene, timeout, context_title=context_title, current_time=current_time
             )
             if result:
                 latency = (time.perf_counter() - start_time) * 1000.0
@@ -195,6 +207,7 @@ class LLMFallbackEngine:
         scene: SceneData,
         timeout: float = 6.0,
         context_title: Optional[str] = None,
+        current_time: Optional[str] = None,
     ) -> dict | None:
         import asyncio
         import json as _json
@@ -205,7 +218,7 @@ class LLMFallbackEngine:
         if context_title:
             system = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
                 title=context_title, question=question
-            )
+            ) + _spoiler_guard(current_time)
         else:
             system = SYSTEM_PROMPT_TEMPLATE.format(
                 channel=scene.channel,
@@ -236,12 +249,13 @@ class LLMFallbackEngine:
         scene: SceneData,
         timeout: float,
         context_title: Optional[str] = None,
+        current_time: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.ollama_host}/api/generate"
         if context_title:
             system_prompt = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
                 title=context_title, question=question
-            )
+            ) + _spoiler_guard(current_time)
         else:
             system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
                 channel=scene.channel,
@@ -272,12 +286,13 @@ class LLMFallbackEngine:
         scene: SceneData,
         timeout: float,
         context_title: Optional[str] = None,
+        current_time: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.openai_base_url}/chat/completions"
         if context_title:
             system_prompt = TITLE_AWARE_SYSTEM_PROMPT_TEMPLATE.format(
                 title=context_title, question=question
-            )
+            ) + _spoiler_guard(current_time)
         else:
             system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
                 channel=scene.channel,
@@ -517,6 +532,7 @@ class LLMFallbackEngine:
         vision_data: Dict[str, Any],
         timeout: float = 6.0,
         context_title: Optional[str] = None,
+        current_time: Optional[str] = None,
     ) -> AnswerPayload:
         start_time = time.perf_counter()
         provider = vision_data.get("provider", "pil-heuristic")

@@ -39,6 +39,7 @@ class KnowledgeRouter:
         lang: str = "en",
         context_title: str | None = None,
         frame_b64: str | None = None,
+        current_time: str | None = None,
     ) -> AnswerPayload:
         """Resolves a question using canonical curated engines or LLM fallback."""
         start_time = time.perf_counter()
@@ -62,11 +63,12 @@ class KnowledgeRouter:
                 frame_b64,
                 context_title=context_title,
                 start_time=start_time,
+                current_time=current_time,
             )
 
         # Otherwise route to LLM fallback
         answer = await llm_fallback_engine.generate_answer(
-            clean_question, scene, context_title=context_title
+            clean_question, scene, context_title=context_title, current_time=current_time
         )
         return answer
 
@@ -77,6 +79,7 @@ class KnowledgeRouter:
         frame_b64: str,
         context_title: Optional[str] = None,
         start_time: Optional[float] = None,
+        current_time: Optional[str] = None,
     ) -> AnswerPayload:
         if start_time is None:
             start_time = time.perf_counter()
@@ -116,6 +119,7 @@ class KnowledgeRouter:
         lang: str = "en",
         context_title: str | None = None,
         frame_b64: str | None = None,
+        current_time: str | None = None,
     ) -> AnswerPayload:
         """Resolve then translate canonical answers to the requested language."""
         answer = await self.resolve(
@@ -126,6 +130,7 @@ class KnowledgeRouter:
             lang,
             context_title=context_title,
             frame_b64=frame_b64,
+            current_time=current_time,
         )
         return translate_answer(answer, lang)
 
