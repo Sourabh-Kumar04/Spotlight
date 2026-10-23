@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -17,6 +18,21 @@ from spotlight import config
 from spotlight.engines.router import knowledge_router
 from spotlight.hub import hub
 from spotlight.intent import classify_intent
+from spotlight.metrics import metrics
+
+# --- Simple in-memory rate limiting (protects the public tunnel) ---
+_rate_buckets = {}  # key -> list of hit timestamps
+
+def _check_rate(key, max_hits, window_s):
+    import time as _t
+    now = _t.time()
+    hits = [t for t in _rate_buckets.get(key, []) if now - t < window_s]
+    if len(hits) >= max_hits:
+        _rate_buckets[key] = hits
+        return False
+    hits.append(now)
+    _rate_buckets[key] = hits
+    return True
 from spotlight.vision import analyze_frame
 from spotlight.voice import transcribe_audio_bytes, synthesize_speech
 from spotlight.models import (
@@ -50,6 +66,19 @@ app.add_middleware(
 # Static files and Templates
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+# --- Debug Health Page (behind SPOTLIGHT_DEBUG=1) ---
+
+@app.get("/health")
+async def health():
+    """Debug health page — returns runtime metrics JSON.
+
+    Disabled unless SPOTLIGHT_DEBUG=1 env var is set.
+    """
+    if os.getenv("SPOTLIGHT_DEBUG", "0") != "1":
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    return metrics.snapshot()
 
 
 # --- Web Page Routes ---
@@ -178,16 +207,23 @@ async def analyze_frame_endpoint(req: FrameAnalysisRequest):
 
 
 @app.post("/api/voice/transcribe")
-async def voice_transcribe_endpoint(req: VoiceTranscribeRequest):
+async def voice_transcribe_endpoint(req: VoiceTranscribeRequest, request: Request):
     """Transcribe user audio base64 using faster-whisper with VAD & ghost-guard."""
     import base64 as _b64
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate("stt:" + client_ip, 20, 60.0):
+        return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 20 transcriptions per minute"})
     try:
         audio_bytes = _b64.b64decode(req.audio_b64)
+    if len(audio_bytes) > 10 * 1024 * 1024:
+        return JSONResponse(status_code=413, content={"error": "audio_too_large", "detail": "audio over 10MB"})
     except Exception:
         return JSONResponse(status_code=400, content={"error": "invalid_base64", "text": "", "segments": []})
 
+    _stt_start = time.perf_counter()
     loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, transcribe_audio_bytes, audio_bytes, req.mime)
+    metrics.record_stt((time.perf_counter() - _stt_start) * 1000.0)
     # Transcribed text hits the intent router first
     intent = classify_intent(result.get("text", ""))
     result["intent"] = intent
@@ -211,13 +247,19 @@ async def set_tv_context(req: TVContextRequest):
     auto-attaches this context when an incoming /api/ask request has no
     explicit context_title / frame_b64.
     """
+    sid = req.session_id or "default"
+    if not _check_rate("tvctx:" + sid, 1, 2.0):
+        return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "max 1 context post per 2s per session"})
+    if req.frame_b64 and len(req.frame_b64) > 2800000:
+        return JSONResponse(status_code=413, content={"error": "frame_too_large", "detail": "frame_b64 over ~2MB"})
     ctx = tv_context_store.set(
-        req.session_id or "default",
+        sid,
         title=req.title,
         current_time=req.currentTime,
         paused=req.paused,
         frame_b64=req.frame_b64,
     )
+    metrics.record_session_context(sid, req.title or "", bool(req.frame_b64))
     return {"status": "ok", "session_id": ctx.session_id}
 
 
@@ -270,6 +312,7 @@ async def handle_ask(req: AskRequest):
         await asyncio.sleep(0.4)
 
     # 2. Resolve knowledge engine
+    _ask_start = time.perf_counter()
     answer = await knowledge_router.resolve_localized(
         beat_id=beat_id,
         question=req.question,
@@ -278,6 +321,9 @@ async def handle_ask(req: AskRequest):
         context_title=effective_context_title,
         frame_b64=effective_frame_b64,
     )
+    metrics.record_ask((time.perf_counter() - _ask_start) * 1000.0)
+    if not answer.is_canonical:
+        metrics.record_llm_provider(answer.engine_id)
 
     # 3. Log to session history
     session_item = session_manager.record_ask(
