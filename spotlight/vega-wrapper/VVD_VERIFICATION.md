@@ -81,8 +81,10 @@ To test whether the package can install and execute without strict module declar
 As Amazon's error message states:
 > *"The Vega Virtual Device is missing modules that are available on a physical device. Test your app using a Fire TV Stick instead."*
 
-- **Vega Virtual Device** is currently limited to native React Native / Kepler components; WebView-dependent applications cannot render in the VVD emulator environment without the full Chromium runtime.
+- **Root cause:** The Vega Virtual Device (0.24 image) omits the Chromium-based WebView rendering engine. The filesystem contains only a 0-byte stub for `/usr/share/webview/icudtl.dat`, and attempting to initialize the webview sandbox (`com.amazon.family.webview`) triggers an immediate SIGABRT in `stem-init`.
+- **Impact:** This is a VVD-only limitation. The SPOTLIGHT TV UI itself is fully functional in a browser at 1920x1080; only the VVD rendering path is a dead end.
+- **See also:** F-07 in FRICTION_LOG.md for the friction-log entry on this issue.
 - For demonstration and verification of the SPOTLIGHT TV UI, recommended paths remain:
   1. **Physical Fire TV Stick (Vega OS / Fire OS)**: Running via Silk browser (`http://<host-ip>:8000/tv`) or installed web app.
   2. **Fire OS Sideload**: Android WebView wrapper APK in `firetv/`.
-  3. **Browser 10-foot emulation**: Fullscreen Chrome/Firefox at 1080p pointing to `/tv`.
+  3. **Browser 10-foot emulation**: Fullscreen Chrome/Firefox at 1080p pointing to `/tv` (used for the demo video).
