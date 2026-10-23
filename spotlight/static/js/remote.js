@@ -25,6 +25,11 @@
   const snapLabel = document.getElementById("snapLabel");
   const snapClearBtn = document.getElementById("snapClearBtn");
 
+  // Custom video URL push to TV
+  const pushUrlBtn = document.getElementById("pushUrlBtn");
+  const pushUrlInput = document.getElementById("pushUrlInput");
+  const pushTitleInput = document.getElementById("pushTitleInput");
+
   let currentBeat = "kids";
   let scenesData = {};
   let ws = null;
@@ -58,6 +63,19 @@
     if (sessionWs && sessionWs.readyState === WebSocket.OPEN) {
       sessionWs.send(JSON.stringify(msg));
     }
+  }
+
+  // Push custom video URL + title to TV via session hub
+  if (pushUrlBtn) {
+    pushUrlBtn.addEventListener("click", () => {
+      const url = (pushUrlInput.value || "").trim();
+      const title = (pushTitleInput.value || "").trim() || "Custom Video";
+      if (!url) return;
+      publishHub({ kind: "play_url", url: url, title: title });
+      // Also update the "now watching" field so ASK uses this title as context
+      if (nowWatchingInput) nowWatchingInput.value = title;
+      if (targetTitle) targetTitle.textContent = title;
+    });
   }
 
   connectSessionWS();

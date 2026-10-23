@@ -71,6 +71,17 @@
       <input type="text" id="nowWatchingInput" class="question-textarea" style="min-height:unset; height:42px; padding:8px 14px; font-size:0.95rem;" placeholder="e.g. Breaking Bad, Severance, Charade..." value="{% if state.context_title %}{{ state.context_title }}{% endif %}" />
     </section>
 
+    <!-- Push Custom Video URL to TV -->
+    <section class="custom-url-card" style="margin: 8px 20px 0; display: flex; flex-direction: column; gap: 6px;">
+      <label class="question-helper">
+        <span>PLAY ON TV:</span>
+        <span style="color:#38bdf8;">PUSH VIDEO URL</span>
+      </label>
+      <input type="text" id="pushUrlInput" class="question-textarea" style="min-height:unset; height:42px; padding:8px 14px; font-size:0.9rem;" placeholder="Direct mp4/webm URL…" />
+      <input type="text" id="pushTitleInput" class="question-textarea" style="min-height:unset; height:42px; padding:8px 14px; font-size:0.9rem;" placeholder="Title…" />
+      <button id="pushUrlBtn" type="button" class="btn-action-secondary" style="padding:10px; font-weight:700; font-size:0.9rem;">▶ PUSH TO TV</button>
+    </section>
+
     <!-- Question Input Box -->
     <section class="question-input-card">
       <label for="questionInput" class="question-helper">
